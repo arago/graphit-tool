@@ -8,6 +8,7 @@ from lxml import etree as et
 from StringIO import StringIO
 import sys
 from itertools import islice, chain
+from urllib import quote_plus
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -48,6 +49,9 @@ class GraphitSession(requests.Session):
 		return self.request('PUT', resource, data=data)
 	def delete(self, resource):
 		return self.request('DELETE', resource)
+	def create(self, ogit_type, data):
+		return self.request(
+			'POST', '/new/' + quote_plus(ogit_type), data=data)
 	def query(self, query, limit=-1,
 			   offset=0, fields=None, concurrent=10, chunksize=10):
 		return QueryResult(self, query,
@@ -319,12 +323,13 @@ class EngineData(GraphitNode):
 		self.payload_field = payload_field
 
 	def push(self):
-		print >>sys.stderr, "Pushing " + self.data['ogit/_id']
-		q = IDQuery([self.data['ogit/_id']])
-		if self.session.query(q):
-			self.session.replace('/' + self.data['ogit/_id'], self.data)
-		else:
+		q = ESQuery({'ogit/_id':[self.data['ogit/_id']]})
+		try:
+			next(self.session.query(q))
+		except StopIteration:
 			self.session.create(self.data['ogit/_type'], self.data)
+		else:
+			self.session.replace('/' + self.data['ogit/_id'], self.data)
 
 class MARSNode(EngineData):
 	def __init__(self, data, validator, session=None):

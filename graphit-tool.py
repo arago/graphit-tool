@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
 	if args['mars'] and args['list']:
 		q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"]})
-		q.add({"+ogit/_id":args['PATTERN']})
+		if args['PATTERN']: q.add({"+ogit/_id":args['PATTERN']})
 		for r in session.query(q, fields=['ogit/_id']):
 			print >>sys.stdout, r['ogit/_id']
 		sys.exit(0)
