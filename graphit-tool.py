@@ -79,6 +79,24 @@ if __name__ == '__main__':
 				print >>sys.stdout, node.to_xml(pretty=True)
 		sys.exit(0)
 
+	if args['mars'] and args['delnode']:
+		factory = EngineDataFactory(
+			'/vagrant/MODEL_default.xsd',
+			'ogit/Automation/MARSNode',
+			MARSNode, session)
+		for node in args['NODEID']:
+			try:
+				session.delete('/' + node)
+				print >>sys.stderr, "Deleted {id}".format(id = node)
+			except GraphitError as e:
+				if e.status == 404:
+					print >>sys.stderr, "Cannot delete node {nd}: Not found!".format(nd=node)
+				elif e.status == 409:
+					print >>sys.stderr, "Cannot delete node {nd}: Already deleted!".format(nd=node)
+				else:
+					print >>sys.stderr, "Cannot delete node {nd}: {err}".format(nd=node, err=e)
+		sys.exit(0)
+
 	if args['mars'] and args['putformalnode'] and args['FILE']:
 		factory = EngineDataFactory(
 			'/vagrant/MODEL_default.xsd',
