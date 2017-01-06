@@ -39,7 +39,7 @@ class GraphitSession(requests.Session):
 				params=params, data=json.dumps(data))
 			r.raise_for_status()
 		except requests.exceptions.HTTPError as e:
-			raise GraphitError(self, e)
+			raise GraphitError(self, r.status_code, e)
 		return r.json()
 
 	def get(self, resource):
@@ -133,7 +133,8 @@ class Token(object):
 
 class GraphitError(Exception):
 	"""Error when talking to GraphIT"""
-	def __init__(self, session, error):
+	def __init__(self, session, status, error):
+		self.status=status
 		self.message="{sess} returned an error: {err}".format(
 			sess=session,
 			err=error)
