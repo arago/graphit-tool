@@ -68,23 +68,27 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	if args['mars'] and args['getformalnode']:
-		factory = EngineDataFactory(
-			'/vagrant/MODEL_default.xsd',
-			'ogit/Automation/MARSNode',
-			MARSNode, session)
-		for node in factory.from_graphit(args['NODEID']):
-			if args['--out']:
-				node.write_xml_file(directory=args['--out'], pretty=True)
-			else:
-				print >>sys.stdout, node.to_xml(pretty=True)
+		q = IDQuery(args['NODEID'])
+		for node in session.query(q, fields=[
+				'ogit/_id', 'ogit/Automation/marsNodeFormalRepresentation', 'ogit/_type']):
+			try:
+				if args['--out']:
+					with open("{directory}/{basename}.{ext}".format(
+							directory=args['--out'], basename=node['ogit/_id'], ext='xml'
+					), 'w', -1) as f:
+							  print >>f, prettify_xml(node['ogit/Automation/marsNodeFormalRepresentation'])
+				else:
+					print >>sys.stdout, prettify_xml(node['ogit/Automation/marsNodeFormalRepresentation'])
+			except KeyError as e:
+				if 'error' in node:
+					print >>sys.stderr, "ERROR: Node '{nd}' {err}".format(
+						nd=node['error']['ogit/_id'], err=node['error']['message'])
+				else:
+					print >>sys.stderr, "ERROR: Node {nd} is missing 'ogit/Automation/marsNodeFormalRepresentation' attribute! Maybe it's not a MARS node?".format(nd=node['ogit/_id'])
 		sys.exit(0)
 
 	if args['mars'] and args['delnode']:
-		factory = EngineDataFactory(
-			'/vagrant/MODEL_default.xsd',
-			'ogit/Automation/MARSNode',
-			MARSNode, session)
-		for node in args['NODEID']:
+		def delete_node(node):
 			try:
 				session.delete('/' + node)
 				print >>sys.stderr, "Deleted {id}".format(id = node)
@@ -95,14 +99,37 @@ if __name__ == '__main__':
 					print >>sys.stderr, "Cannot delete node {nd}: Already deleted!".format(nd=node)
 				else:
 					print >>sys.stderr, "Cannot delete node {nd}: {err}".format(nd=node, err=e)
+		for chunk in chunks(args['NODEID']):
+			jobs = [gevent.spawn(delete_node, n) for n in chunk]
+			gevent.joinall(jobs)
 		sys.exit(0)
 
 	if args['mars'] and args['putformalnode'] and args['FILE']:
-		factory = EngineDataFactory(
-			'/vagrant/MODEL_default.xsd',
-			'ogit/Automation/MARSNode',
-			MARSNode, session)
-		for chunk in chunks(factory.from_xml_files(
-				args['FILE'], pretty=True), 10):
-			jobs = [gevent.spawn(node.push) for node in chunk]
+		mars_validator = XMLValidator('/vagrant/MODEL_default.xsd')
+		def upload_file(filename):
+			try:
+				xml_doc = et.parse(filename).getroot()
+				mars_validator.validate(xml_doc)
+				ogit_id = xml_doc.attrib['ID']
+				data = {
+					'ogit/Automation/marsNodeFormalRepresentation':et.tostring(xml_doc),
+					'ogit/_owner': xml_doc.attrib['CustomerID'],
+					'ogit/_id': ogit_id,
+					'ogit/_type':'ogit/Automation/MARSNode'
+				}
+				q = ESQuery({'ogit/_id':ogit_id})
+				try:
+					next(session.query(q))
+				except StopIteration:
+					session.create('ogit/Automation/MARSNode', data)
+				else:
+					session.replace('/' + ogit_id, data)
+				print ogit_id + " successfully uploaded!"
+			except XMLValidateError:
+				print >>sys.stderr, "ERROR: {f} does not contain a valid MARS node".format(f=filename)
+			except et.XMLSyntaxError:
+				print >>sys.stderr, "ERROR: {f} does not contain valid XML".format(f=filename)
+		mars_validator = XMLValidator('/vagrant/MODEL_default.xsd')
+		for chunk in chunks(args['FILE']):
+			jobs = [gevent.spawn(upload_file, f) for f in chunk]
 			gevent.joinall(jobs)

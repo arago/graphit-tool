@@ -12,12 +12,9 @@ from urllib import quote_plus
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-
-
 def chunks(iterable, size=10):
 	iterator = iter(iterable)
-	for first in iterator:
-		yield chain([first], islice(iterator, size - 1))
+	for first in iterator: yield chain([first], islice(iterator, size - 1))
 
 class GraphitSession(requests.Session):
 
@@ -207,23 +204,36 @@ class IDQuery(object):
 	def __str__(self):
 		return ",".join(self.node_ids)
 
+class IDNotFoundError(Exception):
+	"""Error when retrieving results"""
+	def __init__(self, ID):
+		self.message="Node {ID} not found!".format(ID=ID)
+		self.ID = ID
+
+	def __str__(self):
+		return self.message
+
 class QueryResult(object):
 	def __init__(self, graph, query, limit=-1,
 				 offset=0, fields=None, concurrent=10, chunksize=10):
 		self.graph = graph;
 		self.fields = fields
-		self.result_ids = [i['ogit/_id'] for i in self.graph.request(
+		result=self.graph.request(
 			'POST', '/query/' + query.query_type,
 			data={
 				"query":str(query),
 				"fields":'ogit/_id',
 				"limit":limit,
 				"offset":offset
-			})['items']]
+			})
+		if type(query) is IDQuery:
+			self.result_ids = query.node_ids
+		elif type(query) is ESQuery:
+			self.result_ids = [i['ogit/_id'] for i in result['items'] if 'ogit/_id' in i]
+		else: raise NotImplementedError
 		self.concurrent=concurrent
 		self.chunksize = chunksize
 		self.slices = chunks(self.result_ids, concurrent*chunksize)
-		#self.slices = self.chunker(self.result_ids, concurrent*chunksize)
 		self._cache=[]
 
 	def __iter__(self): return self
@@ -237,10 +247,6 @@ class QueryResult(object):
 			data=data
 		)['items']
 
-	@staticmethod
-	def chunker(seq, size):
-		return (seq[pos:pos + size] for pos in range(0, len(seq), size))
-
 	def next(self):
 		if self.fields==['ogit/_id']:
 			try:
@@ -249,6 +255,9 @@ class QueryResult(object):
 				raise StopIteration
 		if self._cache:
 			return self._cache.pop()
+			if 'error' in item and item['error']['code'] == 404:
+				raise IDNotFoundError(item['error']['ogit/_id'])
+			return item
 		else:
 			c = [c for c in chunks(next(self.slices), self.chunksize)]
 			jobs = [gevent.spawn(self.get_values, items) for items in c]
@@ -256,145 +265,24 @@ class QueryResult(object):
 			self._cache = [i for l in [j.value for j in jobs] for i in l]
 			return self._cache.pop()
 
+class XMLValidateError(Exception):
+	"""Error when retrieving results"""
+	def __init__(self):
+		self.message="XML invalid!"
+
+	def __str__(self):
+		return self.message
+
 class XMLValidator(object):
 	def __init__(self, xsd):
 		xml_schema_doc = et.parse(xsd)
 		self.xml_schema = et.XMLSchema(xml_schema_doc)
-	def validate(self, xml):
-		buf = StringIO(xml)
-		xml_doc = et.parse(buf)
-		result = self.xml_schema.validate(xml_doc)
-		return result
+	def validate(self, xml_doc):
+		if self.xml_schema.validate(xml_doc):
+			return True
+		raise XMLValidateError()
 
-class GraphitNode(object):
-	def __init__(self, data, session=None):
-		self.data = data
-		self.session = session
 
-class AbstractFactory(object):
-	pass
-
-class GraphitNodeFactory(object):
-	def __init__(self, session=None):
-		self.session = session
-	def from_dict(self, dcts):
-		return [GraphitNode(dct, self.session) for dct in dcts]
-	def from_json(self, strings):
-		return self.from_dict([json.loads(string) for string in strings])
-	def from_graphit(self, ogit_ids):
-		try:
-			q = IDQuery(ogit_ids)
-			return [GraphitNode(data, self.session)
-					for data in self.session.query(q)]
-		except AttributeError:
-			raise NoSessionError()
-
-class EngineDataFactory(object):
-	def __init__(self, xsd_file, ogit_type, prod_cls, session=None):
-		self.validator = XMLValidator(xsd_file)
-		self.session=session
-		self.ogit_type = ogit_type
-		self.prod_cls = prod_cls
-	def from_dict(self, dcts):
-		return (self.prod_cls(dct, self.validator, self.session)
-				for dct in dcts)
-	def from_json(self, strings):
-		return self.from_dict([json.loads(string) for string in strings])
-	def from_xml_files(self, files, pretty=False):
-		parser = et.XMLParser(remove_blank_text=True)
-		return (self.prod_cls.from_xml_file(f, parser=parser,
-									 validator=self.validator,
-									 session=self.session,
-									 pretty=pretty) for f in files)
-
-	def from_xml_strings(self, strings, pretty=False):
-		return (self.from_xml_files(StringIO(string), pretty=pretty)
-				for string in strings)
-
-	def from_graphit(self, ogit_ids):
-		try:
-			q = IDQuery(ogit_ids)
-			return (self.prod_cls(data, self.validator, self.session)
-					for data in self.session.query(q))
-		except AttributeError:
-			raise NoSessionError()
-
-class EngineData(GraphitNode):
-	def __init__(self, data, validator, payload_field, session=None):
-		try:
-			if not validator.validate(data[payload_field]):
-				raise InvalidEngineDataError()
-		except et.XMLSyntaxError:
-			raise InvalidEngineDataError()
-		super(EngineData, self).__init__(data, session)
-		self.payload_field = payload_field
-
-	def push(self):
-		q = ESQuery({'ogit/_id':[self.data['ogit/_id']]})
-		try:
-			next(self.session.query(q))
-		except StopIteration:
-			self.session.create(self.data['ogit/_type'], self.data)
-		else:
-			self.session.replace('/' + self.data['ogit/_id'], self.data)
-
-class MARSNode(EngineData):
-	def __init__(self, data, validator, session=None):
-		super(MARSNode, self).__init__(
-			data,
-			validator,
-			'ogit/Automation/marsNodeFormalRepresentation',
-			session)
-
-	@classmethod
-	def from_xml_file(cls, xml_file, parser=None, validator=None,
-					  xsd_file=None,  session=None, pretty=False):
-		if not validator and xsd_file: validator = XMLValidator(xsd_file)
-		if not (validator or xsd_file): raise NotImplementedError
-		if not parser: parser = et.XMLParser(remove_blank_text=True)
-		xml_doc = et.parse(xml_file, parser)
-		xml_root = xml_doc.getroot()
-		ogit_owner = xml_root.attrib['CustomerID']
-		ogit_id = xml_root.attrib['ID']
-		mars_node = et.tostring(xml_root, pretty_print=pretty)
-		data = {
-			'ogit/Automation/marsNodeFormalRepresentation':mars_node,
-			'ogit/_owner':ogit_owner,
-			'ogit/_id':ogit_id,
-			'ogit/_type':'ogit/Automation/MARSNode'
-		}
-		return cls(data, validator, session)
-
-	def to_xml(self,pretty=False):
-		if pretty:
-			parser = et.XMLParser(remove_blank_text=True)
-			buf = StringIO(
-				self.data[self.payload_field])
-			xml_doc = et.parse(buf, parser)
-			root = xml_doc.getroot()
-			xml_string = et.tostring(root, pretty_print=pretty)
-		else:
-			xml_string = self.data[self.payload_field]
-		return xml_string
-
-	def write_xml_file(self, directory='.', pretty=False):
-		with open("{directory}/{basename}.xml".format(
-				directory=directory,
-				basename=self.data['ogit/_id']), 'w', -1) as f:
-			print >>f, self.to_xml(pretty=pretty)
-
-class AutomationIssue(EngineData):
-	def __init__(self, data, validator, session=None):
-		super(AutomationIssue, self).__init__(data, validator, 'ogit/Automation/issueFormalRepresentation', session)
-
-class KnowledgeItem(EngineData):
-	def __init__(self, data, validator, session=None):
-		super(AutomationIssue, self).__init__(data, validator, 'ogit/Automation/knowledgeItemFormalRepresentation', session)
-
-class InvalidEngineDataError(Exception):
-	"""Error when talking to GraphIT"""
-	def __init__(self, message="some error"):
-		self.message=message
-
-	def __str__(self):
-		return self.message
+def prettify_xml(string):
+	p = et.XMLParser(remove_blank_text=True)
+	return et.tostring(et.fromstring(string, p), pretty_print=True)
