@@ -30,6 +30,7 @@ class GraphitSession(requests.Session):
 		super(GraphitSession, self).__init__(*args, **kwargs)
 
 	def request(self, method, url, params=None, data=None):
+		#print >>sys.stderr, "Request to " + url
 		try:
 			headers = self._headers
 			headers["Accept"] = "application/json"
