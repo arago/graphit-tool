@@ -242,6 +242,11 @@ class QueryResult(object):
 		return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 	def next(self):
+		if self.fields==['ogit/_id']:
+			try:
+				return {'ogit/_id':self.result_ids.pop()}
+			except IndexError:
+				raise StopIteration
 		if self._cache:
 			return self._cache.pop()
 		else:
