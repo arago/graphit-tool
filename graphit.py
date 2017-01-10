@@ -27,7 +27,6 @@ class GraphitSession(requests.Session):
 		super(GraphitSession, self).__init__(*args, **kwargs)
 
 	def request(self, method, url, params=None, data=None):
-		#print >>sys.stderr, "Request to " + url
 		try:
 			headers = self._headers
 			headers["Accept"] = "application/json"
@@ -248,22 +247,24 @@ class QueryResult(object):
 		)['items']
 
 	def next(self):
+		def check_item(item):
+			if 'error' in item and item['error']['code'] == 404:
+				raise GraphitNodeError("Node '{nd}' not found!".format(nd=item['error']['ogit/_id']))
+			return item
+
 		if self.fields==['ogit/_id']:
 			try:
 				return {'ogit/_id':self.result_ids.pop()}
 			except IndexError:
 				raise StopIteration
 		if self._cache:
-			return self._cache.pop()
-			if 'error' in item and item['error']['code'] == 404:
-				raise IDNotFoundError(item['error']['ogit/_id'])
-			return item
+			return check_item(self._cache.pop())
 		else:
 			c = [c for c in chunks(next(self.slices), self.chunksize)]
 			jobs = [gevent.spawn(self.get_values, items) for items in c]
 			gevent.joinall(jobs)
 			self._cache = [i for l in [j.value for j in jobs] for i in l]
-			return self._cache.pop()
+			return check_item(self._cache.pop())
 
 class XMLValidateError(Exception):
 	"""Error when retrieving results"""
@@ -282,7 +283,80 @@ class XMLValidator(object):
 			return True
 		raise XMLValidateError()
 
-
 def prettify_xml(string):
 	p = et.XMLParser(remove_blank_text=True)
 	return et.tostring(et.fromstring(string, p), pretty_print=True)
+
+class GraphitNodeError(Exception):
+	"""Error when retrieving results"""
+	def __init__(self, message):
+		self.message=message
+
+	def __str__(self):
+		return self.message
+
+class GraphitNode(object):
+	def __init__(self, session, data):
+		try:
+			self.ogit_id = data['ogit/_id']
+			self.data = data
+			self.session=session
+		except KeyError:
+			raise GraphitNodeError("Data invalid, ogit/_id is missing")
+
+	def push(self):
+		q = ESQuery({'ogit/_id':self.ogit_id})
+		try:
+			next(self.session.query(q))
+			self.session.replace('/' + self.ogit_id, self.data)
+		except StopIteration:
+			self.session.create('ogit/Automation/MARSNode', self.data)
+
+	def delete(self):
+		try:
+			self.session.delete('/' + self.ogit_id)
+		except GraphitError as e:
+			if e.status == 404:
+				raise GraphitNodeError("Cannot delete node '{nd}': Not found!".format(nd=self.ogit_id))
+			elif e.status == 409:
+				raise GraphitNodeError("Cannot delete node '{nd}': Already deleted!".format(nd=self.ogit_id))
+			else:
+				raise GraphitNodeError("Cannot delete node '{nd}': {err}".format(nd=self.ogit_id, err=e))
+
+class MARSNodeError(Exception):
+	"""Error when retrieving results"""
+	def __init__(self, message):
+		self.message=message
+
+	def __str__(self):
+		return self.message
+
+class MARSNode(GraphitNode):
+	@classmethod
+	def from_xmlfile(cls, session, filename, validator=None):
+		try:
+			xml_doc = et.parse(filename).getroot()
+			if validator:
+				validator.validate(xml_doc)
+			ogit_id = xml_doc.attrib['ID']
+			data = {
+				'ogit/Automation/marsNodeFormalRepresentation':et.tostring(xml_doc),
+				'ogit/_owner': xml_doc.attrib['CustomerID'],
+				'ogit/_id': ogit_id,
+				'ogit/_type':'ogit/Automation/MARSNode'
+			}
+		except XMLValidateError:
+			raise MARSNodeError("ERROR: {f} does not contain a valid MARS node".format(f=filename))
+		except et.XMLSyntaxError:
+			raise MARSNodeError("ERROR: {f} does not contain valid XML".format(f=filename))
+		return cls(session, data)
+
+	def print_node(self, stream):
+		try:
+			print >>stream, prettify_xml(self.data['ogit/Automation/marsNodeFormalRepresentation'])
+		except KeyError as e:
+			if 'error' in self.data:
+				raise MARSNodeError("ERROR: Node '{nd}' {err}".format(
+					nd=self.data['error']['ogit/_id'], err=self.data['error']['message']))
+			else:
+				raise MARSNodeError("ERROR: Node {nd} is missing 'ogit/Automation/marsNodeFormalRepresentation' attribute! Maybe it's not a MARS node?".format(nd=self.data['ogit/_id']))
