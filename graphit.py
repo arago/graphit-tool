@@ -218,18 +218,10 @@ class QueryResult(object):
 				 offset=0, fields=None, concurrent=10, chunksize=10):
 		self.graph = graph;
 		self.fields = fields
-		result=self.graph.request(
-			'POST', '/query/' + query.query_type,
-			data={
-				"query":str(query),
-				"fields":'ogit/_id',
-				"limit":limit,
-				"offset":offset
-			})
 		if type(query) is IDQuery:
 			self.result_ids = query.node_ids
 		elif type(query) is ESQuery:
-			self.result_ids = [i['ogit/_id'] for i in result['items'] if 'ogit/_id' in i]
+			self.result_ids = (i['ogit/_id'] for i in self.graph.request('POST', '/query/' + query.query_type, data={"query":str(query), "fields":'ogit/_id', "limit":limit, "offset":offset})['items'] if 'ogit/_id' in i)
 		else: raise NotImplementedError
 		self.result_ids = iter(self.result_ids)
 		self.concurrent=concurrent
