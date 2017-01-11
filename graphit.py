@@ -5,8 +5,6 @@ import time
 import json
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from lxml import etree as et
-from StringIO import StringIO
-import sys
 from itertools import islice, chain
 from urllib import quote_plus
 

@@ -14,7 +14,7 @@ Switches:
 Options:
   -d, --debug        print debug messages
 """
-import sys;sys.path.append("/vagrant/includes.zip")
+import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent
