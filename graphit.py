@@ -230,10 +230,11 @@ class QueryResult(object):
 		elif type(query) is ESQuery:
 			self.result_ids = [i['ogit/_id'] for i in result['items'] if 'ogit/_id' in i]
 		else: raise NotImplementedError
+		self.result_ids = iter(self.result_ids)
 		self.concurrent=concurrent
 		self.chunksize = chunksize
 		self.slices = chunks(self.result_ids, concurrent*chunksize)
-		self._cache=[]
+		self._cache=None
 
 	def __iter__(self): return self
 
@@ -254,17 +255,17 @@ class QueryResult(object):
 
 		if self.fields==['ogit/_id']:
 			try:
-				return {'ogit/_id':self.result_ids.pop()}
+				return {'ogit/_id':next(self.result_ids)}
 			except IndexError:
 				raise StopIteration
 		if self._cache:
-			return check_item(self._cache.pop())
+			return check_item(next(self._cache))
 		else:
 			c = [c for c in chunks(next(self.slices), self.chunksize)]
 			jobs = [gevent.spawn(self.get_values, items) for items in c]
 			gevent.joinall(jobs)
-			self._cache = [i for l in [j.value for j in jobs] for i in l]
-			return check_item(self._cache.pop())
+			self._cache = (i for l in [j.value for j in jobs] for i in l)
+			return check_item(next(self._cache))
 
 class XMLValidateError(Exception):
 	"""Error when retrieving results"""
