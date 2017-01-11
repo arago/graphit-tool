@@ -19,8 +19,10 @@ from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent
 from graphit import GraphitSession, WSO2AuthClientCredentials, ESQuery, IDQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, MARSNodeError
-from lxml import etree as et
 from docopt import docopt
+from ConfigParser import ConfigParser
+from requests.structures import CaseInsensitiveDict
+import os
 
 sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 sys.stderr = codecs.getwriter('utf8')(sys.stderr)
@@ -28,15 +30,25 @@ sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 if __name__ == '__main__':
 	args = docopt(__doc__, version='graphit-tool 0.1')
 
-	session = GraphitSession('https://hiro.ubs.dev:8443')
+	config = ConfigParser(dict_type=CaseInsensitiveDict)
+	config.read(['/etc/graphit-tool.conf', os.path.expanduser('~/.graphit-tool.conf')])
+
+	session = GraphitSession(config.get('graphit', 'url'))
+	try:
+		wso2_verify = config.getboolean('wso2', 'verifycert')
+	except ValueError:
+		wso2_verify = config.get('wso2', 'verifycert')
 	session.auth = WSO2AuthClientCredentials(
-		'https://hiro.ubs.dev:9443',
+		config.get('wso2', 'url'),
 		client = (
-			'FKOGAQRNFe6snU6RYLCYl7qI0woa',
-			'BHHy447ZU1gMrEJcumsQ2vY6p5sa'
+			config.get('wso2', 'clientid'),
+			config.get('wso2', 'clientsecret')
 		),
-		verify=False)
-	session.verify=False
+		verify=wso2_verify)
+	try:
+		session.verify=config.getboolean('graphit', 'verifycert')
+	except ValueError:
+		session.verify=config.get('graphit', 'verifycert')
 
 	if args['mars'] and args['list']:
 		q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"]})
@@ -83,7 +95,7 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	if args['mars'] and args['put'] and args['FILE']:
-		mars_validator = XMLValidator('/vagrant/MODEL_default.xsd')
+		mars_validator = XMLValidator(config.get('mars', 'schema'))
 		def upload_file(filename):
 			try:
 				mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
