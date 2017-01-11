@@ -223,7 +223,6 @@ class QueryResult(object):
 		elif type(query) is ESQuery:
 			self.result_ids = (i['ogit/_id'] for i in self.graph.request('POST', '/query/' + query.query_type, data={"query":str(query), "fields":'ogit/_id', "limit":limit, "offset":offset})['items'] if 'ogit/_id' in i)
 		else: raise NotImplementedError
-		self.result_ids = iter(self.result_ids)
 		self.concurrent=concurrent
 		self.chunksize = chunksize
 		self.slices = chunks(self.result_ids, concurrent*chunksize)
