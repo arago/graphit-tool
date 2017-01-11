@@ -228,7 +228,25 @@ class QueryResult(object):
 		self.slices = chunks(self.result_ids, concurrent*chunksize)
 		self._cache=None
 
-	def __iter__(self): return self
+	def __iter__(self):
+		def gen():
+			def check_item(item):
+				if 'error' in item and item['error']['code'] == 404:
+					raise GraphitNodeError("Node '{nd}' not found!".format(nd=item['error']['ogit/_id']))
+				return item
+
+			for curr in self.result_ids:
+				if self.fields==['ogit/_id']:
+					yield {'ogit/_id':next(self.result_ids)}
+				if self._cache:
+					yield check_item(next(self._cache))
+				else:
+					c = chunks(next(self.slices), self.chunksize)
+					jobs = [gevent.spawn(self.get_values, items) for items in c]
+					gevent.joinall(jobs)
+					self._cache = (i for l in [j.value for j in jobs] for i in l)
+					yield check_item(next(self._cache))
+		return gen()
 
 	def get_values(self, ogit_ids):
 		data = {"query":",".join(ogit_ids)}
@@ -238,26 +256,6 @@ class QueryResult(object):
 			'/query/' + 'ids',
 			data=data
 		)['items']
-
-	def next(self):
-		def check_item(item):
-			if 'error' in item and item['error']['code'] == 404:
-				raise GraphitNodeError("Node '{nd}' not found!".format(nd=item['error']['ogit/_id']))
-			return item
-
-		if self.fields==['ogit/_id']:
-			try:
-				return {'ogit/_id':next(self.result_ids)}
-			except IndexError:
-				raise StopIteration
-		if self._cache:
-			return check_item(next(self._cache))
-		else:
-			c = [c for c in chunks(next(self.slices), self.chunksize)]
-			jobs = [gevent.spawn(self.get_values, items) for items in c]
-			gevent.joinall(jobs)
-			self._cache = (i for l in [j.value for j in jobs] for i in l)
-			return check_item(next(self._cache))
 
 class XMLValidateError(Exception):
 	"""Error when retrieving results"""
