@@ -70,7 +70,10 @@ class WSO2AuthBase(requests.auth.AuthBase):
 				verify=self._verify)
 			r.raise_for_status()
 		except requests.exceptions.HTTPError as e:
-			raise WSO2Error(e)
+			if r.status_code == 401:
+				raise WSO2Error("Could not get an access token from WSO2, check client credentials!")
+			else:
+				raise WSO2Error(e.message)
 		self._token = Token(r.json())
 
 	def renew_token(self, *args, **kwargs):

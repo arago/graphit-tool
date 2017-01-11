@@ -18,7 +18,7 @@ import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent
-from graphit import GraphitSession, WSO2AuthClientCredentials, ESQuery, IDQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, MARSNodeError
+from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, MARSNodeError
 from docopt import docopt
 from ConfigParser import ConfigParser
 from requests.structures import CaseInsensitiveDict
@@ -38,13 +38,16 @@ if __name__ == '__main__':
 		wso2_verify = config.getboolean('wso2', 'verifycert')
 	except ValueError:
 		wso2_verify = config.get('wso2', 'verifycert')
-	session.auth = WSO2AuthClientCredentials(
-		config.get('wso2', 'url'),
-		client = (
-			config.get('wso2', 'clientid'),
-			config.get('wso2', 'clientsecret')
-		),
-		verify=wso2_verify)
+	try:
+		session.auth = WSO2AuthClientCredentials(
+			config.get('wso2', 'url'),
+			client = (
+				config.get('wso2', 'clientid'),
+				config.get('wso2', 'clientsecret')
+			),
+			verify=wso2_verify)
+	except WSO2Error as e:
+		print >>sys.stderr, e
 	try:
 		session.verify=config.getboolean('graphit', 'verifycert')
 	except ValueError:
