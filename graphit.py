@@ -48,7 +48,7 @@ class GraphitSession(requests.Session):
 		return self.request(
 			'POST', '/new/' + quote_plus(ogit_type), data=data)
 	def query(self, query, limit=-1,
-			   offset=0, fields=None, concurrent=10, chunksize=10):
+			   offset=0, fields=None, concurrent=10, chunksize=100):
 		return QueryResult(self, query,
 					 limit=limit, offset=offset, fields=fields,
 					 concurrent=concurrent, chunksize=chunksize)
@@ -213,49 +213,43 @@ class IDNotFoundError(Exception):
 	def __str__(self):
 		return self.message
 
-class QueryResult(object):
-	def __init__(self, graph, query, limit=-1,
-				 offset=0, fields=None, concurrent=10, chunksize=10):
-		self.graph = graph;
-		self.fields = fields
-		if type(query) is IDQuery:
-			self.result_ids = query.node_ids
-		elif type(query) is ESQuery:
-			self.result_ids = (i['ogit/_id'] for i in self.graph.request('POST', '/query/' + query.query_type, data={"query":str(query), "fields":'ogit/_id', "limit":limit, "offset":offset})['items'] if 'ogit/_id' in i)
-		else: raise NotImplementedError
-		self.concurrent=concurrent
-		self.chunksize = chunksize
-		self.slices = chunks(self.result_ids, concurrent*chunksize)
-		self._cache=None
-
-	def __iter__(self):
-		def gen():
-			def check_item(item):
-				if 'error' in item and item['error']['code'] == 404:
-					raise GraphitNodeError("Node '{nd}' not found!".format(nd=item['error']['ogit/_id']))
-				return item
-
-			for curr in self.result_ids:
-				if self.fields==['ogit/_id']:
-					yield {'ogit/_id':next(self.result_ids)}
-				if self._cache:
-					yield check_item(next(self._cache))
-				else:
-					c = chunks(next(self.slices), self.chunksize)
-					jobs = [gevent.spawn(self.get_values, items) for items in c]
-					gevent.joinall(jobs)
-					self._cache = (i for l in [j.value for j in jobs] for i in l)
-					yield check_item(next(self._cache))
-		return gen()
-
-	def get_values(self, ogit_ids):
+def QueryResult(graph, query, limit=-1, offset=0, fields=None, concurrent=10, chunksize=10):
+	def get_values(ogit_ids):
 		data = {"query":",".join(ogit_ids)}
-		if self.fields: data['fields'] = ', '.join(self.fields)
-		return self.graph.request(
+		if fields: data['fields'] = ', '.join(fields)
+		return graph.request(
 			'POST',
 			'/query/' + 'ids',
 			data=data
 		)['items']
+
+	if type(query) is IDQuery:
+		result_ids = query.node_ids
+	elif type(query) is ESQuery:
+		result_ids = (i['ogit/_id'] for i in graph.request(
+			'POST', '/query/' + query.query_type,
+			data={
+				"query":str(query),
+				"fields":'ogit/_id',
+				"limit":limit,
+				"offset":offset
+			})['items'] if 'ogit/_id' in i)
+	else: raise NotImplementedError
+
+	if fields == ['ogit/_id']:
+		for res in result_ids:
+			yield {'ogit/_id':res}
+
+	for curr_slice in chunks(result_ids, chunksize*concurrent):
+		jobs = [gevent.spawn(get_values, list(items)) for items in chunks(curr_slice, chunksize)]
+		gevent.joinall(jobs)
+		for job in jobs:
+			for item in job.value:
+				if 'error' in item and item['error']['code'] == 404:
+					raise GraphitNodeError(
+						"Node '{nd}' not found!".format(
+							nd=item['error']['ogit/_id']))
+				yield item
 
 class XMLValidateError(Exception):
 	"""Error when retrieving results"""
