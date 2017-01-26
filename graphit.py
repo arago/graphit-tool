@@ -3,6 +3,7 @@ import requests
 import requests.auth
 import time
 import json
+import hashlib
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from lxml import etree as et
 from itertools import islice, chain
@@ -324,11 +325,17 @@ class MARSNode(GraphitNode):
 			if validator:
 				validator.validate(xml_doc)
 			ogit_id = xml_doc.attrib['ID']
+			ogit_name = xml_doc.attrib['NodeName']
+			ogit_automation_marsnodetype = xml_doc.attrib['NodeType']
+			ogitid = hashlib.sha256(ogit_id).hexdigest()
 			data = {
 				'ogit/Automation/marsNodeFormalRepresentation':et.tostring(xml_doc),
 				'ogit/_owner': xml_doc.attrib['CustomerID'],
 				'ogit/_id': ogit_id,
-				'ogit/_type':'ogit/Automation/MARSNode'
+				'ogit/_type':'ogit/Automation/MARSNode',
+				'ogit/name':ogit_name,
+				'ogit/Automation/marsNodeType': ogit_automation_marsnodetype,
+				'ogit/id':ogitid
 			}
 		except XMLValidateError:
 			raise MARSNodeError("ERROR: {f} does not contain a valid MARS node".format(f=filename))
