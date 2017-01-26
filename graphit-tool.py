@@ -73,7 +73,7 @@ if __name__ == '__main__':
 		q = IDQuery(args['NODEID'])
 		try:
 			for node in resumeable(session.query(q, fields=[
-					'ogit/_id', 'ogit/Automation/marsNodeFormalRepresentation'])):
+					'ogit/_id', 'ogit/_type', 'ogit/Automation/marsNodeFormalRepresentation'])):
 				if args['--out']:
 					with open("{directory}/{basename}.{ext}".format(
 							directory=args['--out'],
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 	if args['mars'] and args['del']:
 		def delete_node(node):
 			try:
-				MARSNode(session, {'ogit/_id':node}).delete()
+				MARSNode(session, {'ogit/_id':node,'ogit/_type':'ogit/Automation/MARSNode'}).delete()
 				print >>sys.stderr, "Deleted {id}".format(id = node)
 			except GraphitNodeError as e:
 				print >>sys.stderr, e

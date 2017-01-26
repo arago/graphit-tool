@@ -41,8 +41,8 @@ class GraphitSession(requests.Session):
 		return self.request('GET', resource)
 	def update(self, resource, data):
 		return self.request('POST', resource, data=data)
-	def replace(self, resource, data):
-		return self.request('PUT', resource, data=data)
+	def replace(self, resource, data, params=None):
+		return self.request('PUT', resource, data=data, params=params)
 	def delete(self, resource):
 		return self.request('DELETE', resource)
 	def create(self, ogit_type, data):
@@ -292,7 +292,7 @@ class GraphitNode(object):
 			raise GraphitNodeError("Data invalid, ogit/_id is missing or ogit/_type missing")
 
 	def push(self):
-		self.session.replace(self.ogit_type, self.data, params=[{'createIfNotExists':'true'}])
+		self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':True, 'ogit/_type':self.ogit_type})
 
 	def delete(self):
 		try:
