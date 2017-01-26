@@ -285,10 +285,11 @@ class GraphitNode(object):
 	def __init__(self, session, data):
 		try:
 			self.ogit_id = data['ogit/_id']
+			self.ogit_type = data['ogit/_type']
 			self.data = data
 			self.session=session
 		except KeyError:
-			raise GraphitNodeError("Data invalid, ogit/_id is missing")
+			raise GraphitNodeError("Data invalid, ogit/_id is missing or ogit/_type missing")
 
 	def push(self):
 		q = ESQuery({'ogit/_id':self.ogit_id})
@@ -296,7 +297,7 @@ class GraphitNode(object):
 			next(self.session.query(q))
 			self.session.replace('/' + self.ogit_id, self.data)
 		except StopIteration:
-			self.session.create('ogit/Automation/MARSNode', self.data)
+			self.session.create(self.ogit_type, self.data)
 
 	def delete(self):
 		try:
