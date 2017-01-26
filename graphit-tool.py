@@ -6,6 +6,7 @@ Usage:
   graphit-tool [options] mars put FILE...
   graphit-tool [options] mars get [--out=DIR] NODEID...
   graphit-tool [options] mars del NODEID...
+  graphit-tool [options] token (info|get)
 
 Switches:
   -o DIR, --out=DIR  save node to <node_id>.xml in given directory
@@ -110,3 +111,7 @@ if __name__ == '__main__':
 			jobs = [gevent.spawn(upload_file, f) for f in chunk]
 			gevent.joinall(jobs)
 		sys.exit(0)
+	if args['token'] and args['info']:
+		print >>sys.stdout, session.auth
+	if args['token'] and args['get']:
+		print >>sys.stdout, session.auth._token.access_token
