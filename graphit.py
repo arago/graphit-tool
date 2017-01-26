@@ -323,7 +323,7 @@ class MARSNode(GraphitNode):
 			ogit_id = xml_doc.attrib['ID']
 			ogit_name = xml_doc.attrib['NodeName']
 			ogit_automation_marsnodetype = xml_doc.attrib['NodeType']
-			ogitid = hashlib.sha256(ogit_id).hexdigest()
+			ogitid = hashlib.md5(ogit_id).hexdigest()
 			data = {
 				'ogit/Automation/marsNodeFormalRepresentation':et.tostring(xml_doc),
 				'ogit/_owner': xml_doc.attrib['CustomerID'],
