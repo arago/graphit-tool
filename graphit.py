@@ -35,6 +35,8 @@ class GraphitSession(requests.Session):
 			r.raise_for_status()
 		except requests.exceptions.HTTPError as e:
 			raise GraphitError(self, r.status_code, e)
+		except requests.exceptions.ConnectionError as e:
+			raise GraphitError(self, 0, e)
 		return r.json()
 
 	def get(self, resource):
@@ -75,6 +77,8 @@ class WSO2AuthBase(requests.auth.AuthBase):
 				raise WSO2Error("Could not get an access token from WSO2, check client credentials!")
 			else:
 				raise WSO2Error(e.message)
+		except requests.exceptions.ConnectionError as e:
+			raise WSO2Error("Could not connect to WSO2: " + str(e))
 		self._token = Token(r.json())
 
 	def renew_token(self, *args, **kwargs):
