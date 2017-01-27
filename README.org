@@ -6,9 +6,15 @@
 Small command line tool to work with GraphIT.
 
 * Installation
-  To install `graphit-tool`, install the included RPMs. All but
-  `graphit-tool-0.1-1.noarch.rpm` and `docopt-0.6.2-1.noarch.rpm` can
-  also be fetched from the official `epel` repository.
+  Install the included RPMs. There are some dependencies that require
+  the “Extra Packages for Enterprise Linux”
+  (https://fedoraproject.org/wiki/EPEL) repository to be active:
+
+#+BEGIN_SRC sh :exports code
+yum install epel-release # if necessary
+yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
+#+END_SRC
+
 * Setup
 ** Setup WSO2 Service Provider and Policies
    In order for `graphit-tool` to be able to access the source and
