@@ -49,6 +49,7 @@ if __name__ == '__main__':
 			verify=wso2_verify)
 	except WSO2Error as e:
 		print >>sys.stderr, e
+		sys.exit(10)
 	try:
 		session.verify=config.getboolean('graphit', 'verifycert')
 	except ValueError:
@@ -63,6 +64,7 @@ if __name__ == '__main__':
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
 
 	if args['mars'] and args['get']:
 		def resumeable(gen):
@@ -85,6 +87,7 @@ if __name__ == '__main__':
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot get nodes: {err}".format(err=e)
+			sys.exit(5)
 
 	if args['mars'] and args['del']:
 		def delete_node(node):
@@ -111,7 +114,9 @@ if __name__ == '__main__':
 			jobs = [gevent.spawn(upload_file, f) for f in chunk]
 			gevent.joinall(jobs)
 		sys.exit(0)
+
 	if args['token'] and args['info']:
 		print >>sys.stdout, session.auth
+
 	if args['token'] and args['get']:
 		print >>sys.stdout, session.auth._token.access_token
