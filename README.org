@@ -72,11 +72,11 @@
    The configuration file looks like this:
    #+BEGIN_SRC
 [Graphit]
-URL: https://graphit.ubs.com:8443
+URL: https://graphit.yourdomain.com:8443
 VerifyCert: /usr/share/graphit-tool/graphit-server.pem
 
 [WSO2]
-URL: https://wso2.ubs.com:9443
+URL: https://wso2.yourdomain.com:9443
 VerifyCert: /usr/share/graphit-tool/wso2carbon.pem
 ClientID: GRAPHIT_TOOL_CLIENT_ID
 ClientSecret: GRAPHIT_TOOL_CLIENT_SECRET
