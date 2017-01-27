@@ -1,0 +1,114 @@
+#+TITLE: graphit-tool
+#+AUTHOR: Marcus Klemm
+#+DATE: v0.1, 2017-01-10
+#+ATTR_ASCIIDOC: :icons font
+
+* Installation
+  To install `graphit-tool`, install the included RPMs. All but
+  `graphit-tool-0.1-1.noarch.rpm` and `docopt-0.6.2-1.noarch.rpm` can
+  also be fetched from the official `epel` repository.
+* Setup
+** Setup WSO2 Service Provider and Policies
+   In order for `graphit-tool` to be able to access the source and
+   target environment's Graph Database, a Service Provider has to be
+   created and an access policy has to be installed.
+
+*** Creating the Service Provider
+	1. Log into WSO2 and go to Main → Identity → Service Providers → Add
+
+	2. As Service Provider Name, fill in “graphit-tool”
+       (exactly like that), the Description doesn’t matter. Click on
+       “Register”
+
+	   #+ATTR_ASCIIDOC: :width 600 :align center
+	   [[file:img/add_service_provider.png]]
+
+	3. Open “Inbound Authentication Configuration” → “OAuth/OpenID
+       Connect Configuration” and click on “Configure”.
+
+	   #+ATTR_ASCIIDOC: :width 600 :align center
+	   [[file:img/conf_service_provider.png]]
+
+	4. Uncheck everything but “Client Credentials” and click “Add”.
+
+	   #+ATTR_ASCIIDOC: :width 600 :align center
+	   [[file:img/auth_settings.png]]
+
+	5. Click on “Show” and copy the client key and the client
+       secret. You’ll need them later in the Deployment KI
+       configuration:
+
+	   #+ATTR_ASCIIDOC: :width 600 :align center
+	   [[file:img/credentials.png]]
+
+	6. Click on “Update”
+
+*** Adding the co.arago.GraphIT-allow-All-graphit-tool policy
+	IMPORTANT: This step is always necessary as it grants graphit-tool
+	access to the Graph Database. Without this policy, graphit-tool
+	will not be able to write to the Graph Database
+
+	1. Go to Main → Entitlement → PAP → Policy Administration
+
+	2. Click on “Add New Entitlement Policy” and select “Import
+       Existing Policy”.
+
+	3. Select the `co.arago.GraphIT-allow-All-graphit-tool.xml` file
+       and click on “Upload”.
+
+	4. Back in the policy list, publish the new
+       “co.arago.GraphIT-allow-All-graphit-tool” policy by clicking on
+       “Publish to My PDP” and then on “Publish”.
+** Copying the Graphit-Server and WSO2 certificates
+   Get `graphit-server.pem` and `wso2carbon.pem` from your HIRO
+   instance's IAM and Database node (they're located at
+   `/opt/autopilot/conf/certs/`) and copy them to
+   `/usr/share/graphit-tool/`
+** Configuration
+   The system–wide configuration file is located at
+   `/etc/graphit-tool.conf`. User–specific settings can be stored in
+   `~/.graphit-tool.conf`.
+
+   The configuration file looks like this:
+   #+BEGIN_SRC
+[Graphit]
+URL: https://graphit.ubs.com:8443
+VerifyCert: /usr/share/graphit-tool/graphit-server.pem
+
+[WSO2]
+URL: https://wso2.ubs.com:9443
+VerifyCert: /usr/share/graphit-tool/wso2carbon.pem
+ClientID: GRAPHIT_TOOL_CLIENT_ID
+ClientSecret: GRAPHIT_TOOL_CLIENT_SECRET
+
+[MARS]
+Schema: /usr/share/graphit-tool/MODEL_default.xsd
+   #+END_SRC
+
+   The following values *must* be set:
+   #+ATTR_ASCIIDOC: :width 100
+   | Setting              | Value                                                                                                                                                                                                                      |
+   |----------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+   | Graphit → URL        | REST URL of your GraphIT (same as cockpit URL)                                                                                                                                                                             |
+   | Graphit → VerifyCert | Path to the graphit-server certificate. If you're using public certificates that can be verified using the system's keychain, this can also be set to “Yes”. Setting this value to “No” disables certificate verification. |
+   | WSO2 → URL           | REST URL of your WSO2 (same as WSO2 admin interface)                                                                                                                                                                       |
+   | WSO2 → VerifyCert    | Path to the wso2carbon certificate. If you're using public certificates that can be verified using the system's keychain, this can also be set to “Yes”. Setting this value to “No” disables certificate verification.     |
+   | WSO2 → ClientID      | ClientID of the congigured Service Provider (see section “Creating the Service Provider” above                                                                                                                             |
+   | WSO2 → ClientSecret  | ClientSecret of the configured Service Provider                                                                                                                                                                            |
+* Usage
+  #+BEGIN_SRC
+graphit-tool
+
+Usage:
+  graphit-tool [options] mars list [PATTERN]...
+  graphit-tool [options] mars put FILE...
+  graphit-tool [options] mars get [--out=DIR] NODEID...
+  graphit-tool [options] mars del NODEID...
+
+Switches:
+  -o DIR, --out=DIR  save node to <node_id>.xml in given directory
+  -h, --help         print help and exit
+
+Options:
+  -d, --debug        print debug messages
+  #+END_SRC
