@@ -1,4 +1,5 @@
 dist/
+test_model/
 *.pyc
 *.pyo
 MANIFEST
