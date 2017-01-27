@@ -106,6 +106,7 @@ Usage:
   graphit-tool [options] mars put FILE...
   graphit-tool [options] mars get [--out=DIR] NODEID...
   graphit-tool [options] mars del NODEID...
+  graphit-tool [options] token (info|get)
 
 Switches:
   -o DIR, --out=DIR  save node to <node_id>.xml in given directory
@@ -116,7 +117,9 @@ Options:
   #+END_SRC
 * Changelog
 ** graphit-tool-0.1
-   - query, read and write MARS nodes
+   - query, delete, get and put MARS nodes
+   - get current access token
+   - print info about current access token
 * License (MIT)
   Copyright (c) 2017 arago GmbH
 
