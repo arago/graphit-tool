@@ -1,4 +1,7 @@
 #!/usr/bin/env python2
+import os
+if os.environ.get('USER','') == 'vagrant':
+    del os.link
 
 import distutils.core
 
