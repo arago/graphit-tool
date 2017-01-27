@@ -119,4 +119,4 @@ if __name__ == '__main__':
 		print >>sys.stdout, session.auth
 
 	if args['token'] and args['get']:
-		print >>sys.stdout, session.auth._token.access_token
+		print >>sys.stdout, session.auth.token
