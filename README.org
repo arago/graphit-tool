@@ -6,7 +6,7 @@
 Small command line tool to work with GraphIT.
 
 * Installation
-  Download and install the ~.rpm~ packages from the [[releases][releases page]] of this repository. There are some dependencies that require
+  Download and install the ~.rpm~ packages from the [[../../releases][releases page]] of this repository. There are some dependencies that require
   the “Extra Packages for Enterprise Linux”
   (https://fedoraproject.org/wiki/EPEL) repository to be active:
 
