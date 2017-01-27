@@ -296,7 +296,7 @@ class GraphitNode(object):
 			raise GraphitNodeError("Data invalid, ogit/_id is missing or ogit/_type missing")
 
 	def push(self):
-		self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':True, 'ogit/_type':self.ogit_type})
+		self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
 
 	def delete(self):
 		try:
