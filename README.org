@@ -76,8 +76,8 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
    ~/usr/share/graphit-tool/~
 ** Configuration
    The system–wide configuration file is located at
-   `/etc/graphit-tool.conf`. User–specific settings can be stored in
-   `~/.graphit-tool.conf`.
+   ~/etc/graphit-tool.conf~. User–specific settings can be stored in
+   =~/.graphit-tool.conf=.
 
    The configuration file looks like this:
    #+BEGIN_SRC
