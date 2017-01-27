@@ -54,7 +54,9 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
 *** Adding the co.arago.GraphIT-allow-All-graphit-tool policy
 	IMPORTANT: This step is always necessary as it grants graphit-tool
 	access to the Graph Database. Without this policy, graphit-tool
-	will not be able to write to the Graph Database
+	will not be able to write to the Graph Database.
+
+	The policy can be downloaded here: [[policies/co.arago.GraphIT-allow-All-graphit-tool.xml]]
 
 	1. Go to Main → Entitlement → PAP → Policy Administration
 
