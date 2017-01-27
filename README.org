@@ -12,7 +12,7 @@ Small command line tool to work with GraphIT.
 
 #+BEGIN_SRC sh :exports code
 yum install epel-release # if necessary
-yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
+yum localinstall graphit-tool-x.x-x.noarch.rpm
 #+END_SRC
 
 * Setup
@@ -127,6 +127,10 @@ Options:
    - query, delete, get and put MARS nodes
    - get current access token
    - print info about current access token
+** graphit-tool-0.1.1
+   - BUGFIX: Creation of new MARSNodes failed, wrong case in parameter
+   - BUILD: Depend on python-docopt instead of homegrown docopt package
+
 * License (MIT)
   Copyright (c) 2017 arago GmbH
 
