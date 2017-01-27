@@ -17,9 +17,9 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
 
 * Setup
 ** Setup WSO2 Service Provider and Policies
-   In order for ~graphit-tool~ to be able to access the source and
-   target environment's Graph Database, a Service Provider has to be
-   created and an access policy has to be installed.
+   In order for ~graphit-tool~ to be able to access the Graph
+   Database, a Service Provider has to be created and an access policy
+   has to be installed.
 
 *** Creating the Service Provider
 	1. Log into WSO2 and go to Main → Identity → Service Providers → Add
@@ -43,8 +43,7 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
 	   [[file:img/auth_settings.png]]
 
 	5. Click on “Show” and copy the client key and the client
-       secret. You’ll need them later in the Deployment KI
-       configuration:
+       secret. You’ll need them later in the configuration:
 
 	   #+ATTR_ASCIIDOC: :width 600 :align center
 	   [[file:img/credentials.png]]
