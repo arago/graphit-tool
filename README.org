@@ -17,7 +17,7 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
 
 * Setup
 ** Setup WSO2 Service Provider and Policies
-   In order for `graphit-tool` to be able to access the source and
+   In order for ~graphit-tool~ to be able to access the source and
    target environment's Graph Database, a Service Provider has to be
    created and an access policy has to be installed.
 
@@ -63,17 +63,17 @@ yum localinstall docopt-x.x.x-x.noarch.rpm graphit-tool-x.x-x.noarch.rpm
 	2. Click on “Add New Entitlement Policy” and select “Import
        Existing Policy”.
 
-	3. Select the `co.arago.GraphIT-allow-All-graphit-tool.xml` file
+	3. Select the ~co.arago.GraphIT-allow-All-graphit-tool.xml~ file
        and click on “Upload”.
 
 	4. Back in the policy list, publish the new
        “co.arago.GraphIT-allow-All-graphit-tool” policy by clicking on
        “Publish to My PDP” and then on “Publish”.
 ** Copying the Graphit-Server and WSO2 certificates
-   Get `graphit-server.pem` and `wso2carbon.pem` from your HIRO
+   Get ~graphit-server.pem~ and ~wso2carbon.pem~ from your HIRO
    instance's IAM and Database node (they're located at
-   `/opt/autopilot/conf/certs/`) and copy them to
-   `/usr/share/graphit-tool/`
+   ~/opt/autopilot/conf/certs/~) and copy them to
+   ~/usr/share/graphit-tool/~
 ** Configuration
    The system–wide configuration file is located at
    `/etc/graphit-tool.conf`. User–specific settings can be stored in
