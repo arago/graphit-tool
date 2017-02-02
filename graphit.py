@@ -300,7 +300,7 @@ class GraphitNode(object):
 		try:
 			next(self.session.query(q))
 			self.session.replace('/' + self.ogit_id, self.data)
-		except StopIteration:
+		except (StopIteration, GraphitNodeError):
 			self.session.create(self.ogit_type, self.data)
 		#self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
 
