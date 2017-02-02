@@ -29,7 +29,7 @@ sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
 if __name__ == '__main__':
-	args = docopt(__doc__, version='graphit-tool 0.1')
+	args = docopt(__doc__, version='graphit-tool 0.1.2')
 
 	config = ConfigParser(dict_type=CaseInsensitiveDict)
 	config.read(['/etc/graphit-tool.conf', os.path.expanduser('~/.graphit-tool.conf')])
