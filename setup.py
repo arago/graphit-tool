@@ -8,7 +8,7 @@ import distutils.core
 name = 'graphit-tool'
 
 distutils.core.setup(name=name,
-    version='0.1.3',
+    version='0.1.4',
     author="Marcus Klemm",
     author_email="mklemm@arago.de",
     url="https://arago.co",
