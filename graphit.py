@@ -209,6 +209,13 @@ class IDQuery(object):
 	def __str__(self):
 		return ",".join(self.node_ids)
 
+
+
+class VerbQuery(object):
+	def __init__(self, node_id, verb):
+		self.node_id = node_id
+		self.verb = verb
+
 class IDNotFoundError(Exception):
 	"""Error when retrieving results"""
 	def __init__(self, ID):
@@ -239,6 +246,9 @@ def QueryResult(graph, query, limit=-1, offset=0, fields=None, concurrent=10, ch
 				"limit":limit,
 				"offset":offset
 			})['items'] if 'ogit/_id' in i)
+	elif type(query) is VerbQuery:
+		test = graph.get('/' + query.node_id + '/' + quote_plus(query.verb) + '/')['items']
+		result_ids = (i['ogit/_id'] for i in test)
 	else: raise NotImplementedError
 
 	if fields == ['ogit/_id']:
