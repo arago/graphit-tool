@@ -7,6 +7,7 @@ Usage:
   graphit-tool [options] mars get [--out=DIR] NODEID...
   graphit-tool [options] mars del NODEID...
   graphit-tool [options] token (info|get)
+  graphit-tool [options] ci cleanup
 
 Switches:
   -o DIR, --out=DIR  save node to <node_id>.xml in given directory
@@ -19,7 +20,7 @@ import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent
-from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, MARSNodeError
+from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
 from docopt import docopt
 from ConfigParser import ConfigParser
 from requests.structures import CaseInsensitiveDict
@@ -120,3 +121,18 @@ if __name__ == '__main__':
 
 	if args['token'] and args['get']:
 		print >>sys.stdout, session.auth.token
+
+	if args['ci'] and args['cleanup']:
+		q = ESQuery({"+ogit/_type":["ogit/ConfigurationItem"]})
+		try:
+			for r in session.query(q, fields=['ogit/_id']):
+				q2 = VerbQuery(r['ogit/_id'], "ogit/corresponds")
+				no_corresponds = len(list(session.query(q2, fields=['ogit/_id'])))
+				print >>sys.stdout, "ConfigurationItem '" + r['ogit/_id'] + "' has " + str(no_corresponds) + " connection(s)."
+				if no_corresponds == 0:
+					print >>sys.stdout, "deleting"
+					GraphitNode(session, {'ogit/_id':r['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
+			sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
