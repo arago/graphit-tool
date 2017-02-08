@@ -93,6 +93,10 @@ if __name__ == '__main__':
 	if args['mars'] and args['del']:
 		def delete_node(node):
 			try:
+				q2 = VerbQuery(node, "ogit/corresponds", ogit_types=['ogit/ConfigurationItem'])
+				for item in session.query(q2, fields=['ogit/_id']):
+					print >>sys.stderr, "Deleted corresponding {id}".format(id=item['ogit/_id'])
+					GraphitNode(session, {'ogit/_id':item['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
 				MARSNode(session, {'ogit/_id':node,'ogit/_type':'ogit/Automation/MARSNode'}).delete()
 				print >>sys.stderr, "Deleted {id}".format(id = node)
 			except GraphitNodeError as e:
