@@ -7,7 +7,7 @@ Usage:
   graphit-tool [options] mars get [--out=DIR] NODEID...
   graphit-tool [options] mars del NODEID...
   graphit-tool [options] token (info|get)
-  graphit-tool [options] ci cleanup
+  graphit-tool [options] ci (count_orphans|cleanup_orphans)
 
 Switches:
   -o DIR, --out=DIR  save node to <node_id>.xml in given directory
@@ -122,16 +122,39 @@ if __name__ == '__main__':
 	if args['token'] and args['get']:
 		print >>sys.stdout, session.auth.token
 
-	if args['ci'] and args['cleanup']:
+	if args['ci'] and args['count_orphans']:
 		q = ESQuery({"+ogit/_type":["ogit/ConfigurationItem"]})
 		try:
-			for r in session.query(q, fields=['ogit/_id']):
-				q2 = VerbQuery(r['ogit/_id'], "ogit/corresponds")
-				no_corresponds = len(list(session.query(q2, fields=['ogit/_id'])))
-				print >>sys.stdout, "ConfigurationItem '" + r['ogit/_id'] + "' has " + str(no_corresponds) + " connection(s)."
-				if no_corresponds == 0:
-					print >>sys.stdout, "deleting"
-					GraphitNode(session, {'ogit/_id':r['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
+			orphsum = 0
+			def count_corresponds(node):
+				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
+				return len(list(session.query(q2, fields=['ogit/_id'])))
+			for chunk in chunks(session.query(q, fields=['ogit/_id']), 100):
+				jobs = [gevent.spawn(count_corresponds, n) for n in chunk]
+				gevent.joinall(jobs)
+				orphsum += sum([1 for job in jobs if job.value==0])
+			print >>sys.stdout, orphsum
+			sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
+
+	if args['ci'] and args['cleanup_orphans']:
+		q = ESQuery({"+ogit/_type":["ogit/ConfigurationItem"]})
+		try:
+			def delete_if_orphan(node):
+				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
+				no_conn = len(list(session.query(q2, fields=['ogit/_id'])))
+				if no_conn == 0:
+					print >>sys.stdout, "{node} has {no} corresponding vertices, deleting ...".format(
+						node=node['ogit/_id'], no=no_conn)
+					GraphitNode(session, {'ogit/_id':node['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
+				else:
+					print >>sys.stdout, "{node} has {no} corresponding vertices.".format(
+						node=node['ogit/_id'], no=no_conn)
+			for chunk in chunks(session.query(q, fields=['ogit/_id']), 100):
+				jobs = [gevent.spawn(delete_if_orphan, n) for n in chunk]
+				gevent.joinall(jobs)
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
