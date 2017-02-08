@@ -1,3 +1,5 @@
+test -f /etc/graphit-tool.conf.rpmsave || exit 0
+
 if cmp --silent /etc/graphit-tool.conf /etc/graphit-tool.rpmsave
 then
   rm /etc/graphit-tool.rpmsave
