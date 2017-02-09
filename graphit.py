@@ -310,12 +310,12 @@ class GraphitNode(object):
 			raise GraphitNodeError("Data invalid, ogit/_id is missing or ogit/_type missing")
 
 	def push(self):
-		q = ESQuery({'ogit/_id':self.ogit_id})
 		try:
-			next(self.session.query(q))
-			self.session.replace('/' + self.ogit_id, self.data)
-		except (StopIteration, GraphitNodeError):
 			self.session.create(self.ogit_type, self.data)
+		except GraphitError as e:
+			if e.status == 409:
+				self.session.replace('/' + self.ogit_id, self.data)
+			else: raise
 		#self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
 
 	def delete(self):
