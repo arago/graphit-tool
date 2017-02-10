@@ -133,7 +133,7 @@ if __name__ == '__main__':
 			def count_corresponds(node):
 				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
 				return len(list(session.query(q2, fields=['ogit/_id'])))
-			for chunk in chunks(session.query(q, fields=['ogit/_id']), 100):
+			for chunk in chunks(session.query(q, fields=['ogit/_id'])):
 				jobs = [gevent.spawn(count_corresponds, n) for n in chunk]
 				gevent.joinall(jobs)
 				orphsum += sum([1 for job in jobs if job.value==0])
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 				else:
 					print >>sys.stdout, "{node} has {no} corresponding vertices.".format(
 						node=node['ogit/_id'], no=no_conn)
-			for chunk in chunks(session.query(q, fields=['ogit/_id']), 100):
+			for chunk in chunks(session.query(q, fields=['ogit/_id'])):
 				jobs = [gevent.spawn(delete_if_orphan, n) for n in chunk]
 				gevent.joinall(jobs)
 			sys.exit(0)
