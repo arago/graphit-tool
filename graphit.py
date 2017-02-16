@@ -177,9 +177,23 @@ class ESQuery(object):
 				string[0] = string[0][1:]
 			return "".join(string)
 		def escape_term(string):
-			return "".join([('\\' + c if c in "\\/+-~=\"<>!(){}[]^:&|"
-					   else c)
-					  for c in string])
+			if string[0] == "/" and string[-1] == "/":
+				return "".join([('\\' + c if c in "-~=<>!:&"
+						   else c)
+						  for c in string])
+			elif string[0] in ["[","{"] and string[-1] in ["]","}"]:
+				return "".join([('\\' + c if c in "\\/+~=<>!()^:&|"
+						   else c)
+						  for c in string])
+			elif string[0] in [">","<"]:
+				return "".join([('\\' + c if c in "\\/+-~!(){}[]^:&|"
+						   else c)
+						  for c in string])
+			else:
+				return "".join([('\\' + c if c in "\\/+-~=<>!(){}[]^:&|"
+						   else c)
+						  for c in string])
+
 		def join_set(lst):
 			return "(" + " OR ".join([escape_term(it) for it in lst]) + ")"
 		return " ".join(
