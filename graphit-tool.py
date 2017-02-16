@@ -8,13 +8,17 @@ Usage:
   graphit-tool [options] mars del NODEID...
   graphit-tool [options] token (info|get)
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
+  graphit-tool [options] vertex get OGITID...
+  graphit-tool [options] vertex query [--field=FIELD...] [--pretty] [--] QUERY...
 
 Switches:
-  -o DIR, --out=DIR  save node to <node_id>.xml in given directory
-  -h, --help         print help and exit
+  -o DIR, --out=DIR        save node to <node_id>.xml in given directory
+  -f FIELD, --field=FIELD  Return only given fields
+  -p, --pretty             Pretty print JSON data
+  -h, --help               print help and exit
 
 Options:
-  -d, --debug        print debug messages
+  -d, --debug              print debug messages
 """
 import sys
 from gevent import monkey; monkey.patch_all()
@@ -159,6 +163,19 @@ if __name__ == '__main__':
 			for chunk in chunks(session.query(q, fields=['ogit/_id'])):
 				jobs = [gevent.spawn(delete_if_orphan, n) for n in chunk]
 				gevent.joinall(jobs)
+			sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
+
+	if args['vertex'] and args['query']:
+		q = ESQuery()
+		for cond in args['QUERY']:
+			arr=cond.split(':', 1)
+			q.add({arr[0]:arr[1]})
+		try:
+			for r in session.query(q, fields=args['--field']):
+				print >>sys.stdout, GraphitNode(session,r).json(pretty_print=args['--pretty'])
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
