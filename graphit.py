@@ -195,7 +195,7 @@ class ESQuery(object):
 						  for c in string])
 
 		def join_set(lst):
-			return "(" + " OR ".join([escape_term(it) for it in lst]) + ")"
+			return "(" + " AND ".join([escape_term(it) for it in lst]) + ")"
 		return " ".join(
 			["{key}:{val}".format(
 				key=escape_fieldname(key),
