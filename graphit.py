@@ -343,6 +343,11 @@ class GraphitNode(object):
 			else:
 				raise GraphitNodeError("Cannot delete node '{nd}': {err}".format(nd=self.data["ogit/_id"], err=e))
 
+	def json(self, pretty_print=False):
+		if pretty_print:
+			return json.dumps(self.data,sort_keys=True, indent=4, separators=(',', ': '))
+		else:
+			return json.dumps(self.data)
 
 class MARSNodeError(Exception):
 	"""Error when retrieving results"""
