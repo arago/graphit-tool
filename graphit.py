@@ -315,33 +315,34 @@ class GraphitNodeError(Exception):
 
 class GraphitNode(object):
 	def __init__(self, session, data):
-		try:
-			self.ogit_id = data['ogit/_id']
-			self.ogit_type = data['ogit/_type']
-			self.data = data
-			self.session=session
-		except KeyError:
-			raise GraphitNodeError("Data invalid, ogit/_id is missing or ogit/_type missing")
+		self.data = data
+		self.session=session
 
 	def push(self):
 		try:
-			self.session.create(self.ogit_type, self.data)
+			self.session.create(self.data['ogit/_type'], self.data)
+		except KeyError:
+			raise GraphitNodeError("Data invalid, ogit/_type is missing.")
 		except GraphitError as e:
 			if e.status == 409:
-				self.session.replace('/' + self.ogit_id, self.data)
+				try:
+					self.session.replace('/' + self.data["ogit/_id"], self.data)
+				except KeyError:
+					raise GraphitNodeError("Data invalid, ogit/_id is missing.")
 			else: raise
 		#self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
 
 	def delete(self):
 		try:
-			self.session.delete('/' + self.ogit_id)
+			self.session.delete('/' + self.data["ogit/_id"])
 		except GraphitError as e:
 			if e.status == 404:
-				raise GraphitNodeError("Cannot delete node '{nd}': Not found!".format(nd=self.ogit_id))
+				raise GraphitNodeError("Cannot delete node '{nd}': Not found!".format(nd=self.data["ogit/_id"]))
 			elif e.status == 409:
-				raise GraphitNodeError("Cannot delete node '{nd}': Already deleted!".format(nd=self.ogit_id))
+				raise GraphitNodeError("Cannot delete node '{nd}': Already deleted!".format(nd=self.data["ogit/_id"]))
 			else:
-				raise GraphitNodeError("Cannot delete node '{nd}': {err}".format(nd=self.ogit_id, err=e))
+				raise GraphitNodeError("Cannot delete node '{nd}': {err}".format(nd=self.data["ogit/_id"], err=e))
+
 
 class MARSNodeError(Exception):
 	"""Error when retrieving results"""
