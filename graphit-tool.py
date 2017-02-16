@@ -112,7 +112,7 @@ if __name__ == '__main__':
 			try:
 				mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
 				mars_node.push()
-				print >>sys.stdout, mars_node.ogit_id + " successfully uploaded!"
+				print >>sys.stdout, mars_node.data["ogit/_id"] + " successfully uploaded!"
 			except MARSNodeError as e:
 				print >>sys.stderr, e
 		for chunk in chunks(args['FILE']):
