@@ -34,7 +34,13 @@ class GraphitSession(requests.Session):
 				params=params, data=json.dumps(data))
 			r.raise_for_status()
 		except requests.exceptions.HTTPError as e:
-			raise GraphitError(self, r.status_code, e)
+			try:
+				error_message = r.json()['error']['message']
+			except ValueError:
+				error_message = None
+			except KeyError:
+				error_message = None
+			raise GraphitError(self, r.status_code, e, error_message)
 		except requests.exceptions.ConnectionError as e:
 			raise GraphitError(self, 0, e)
 		return r.json()
@@ -135,14 +141,22 @@ class Token(object):
 
 class GraphitError(Exception):
 	"""Error when talking to GraphIT"""
-	def __init__(self, session, status, error):
+	def __init__(self, session, status, error, message=None):
+		self.session=session
 		self.status=status
-		self.message="{sess} returned an error: {err}".format(
-			sess=session,
-			err=error)
+		self.error = error
+		self.message=message
 
 	def __str__(self):
-		return self.message
+		if self.message:
+			return "{sess} returned an error: {err}: {msg}".format(
+				sess=self.session,
+				err=self.error,
+				msg=self.message)
+		else:
+			return "{sess} returned an error: {err}".format(
+				sess=self.session,
+				err=self.error)
 
 class WSO2Error(Exception):
 	"""Error when talking to GraphIT"""
