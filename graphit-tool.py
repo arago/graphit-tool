@@ -119,6 +119,8 @@ if __name__ == '__main__':
 				print >>sys.stdout, mars_node.data["ogit/_id"] + " successfully uploaded!"
 			except MARSNodeError as e:
 				print >>sys.stderr, e
+			except GraphitError as e:
+				print >>sys.stdout, e
 		for chunk in chunks(args['FILE']):
 			jobs = [gevent.spawn(upload_file, f) for f in chunk]
 			gevent.joinall(jobs)
