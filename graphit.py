@@ -332,6 +332,17 @@ class GraphitNode(object):
 		self.data = data
 		self.session=session
 
+	def create_owner(self, owner=None):
+		if not owner: owner=self.data['ogit/_owner']
+		GraphitNode(self.session, {
+					"ogit/_custom-id" : self.data['ogit/_owner'],
+					"ogit/_id" : self.data['ogit/_owner'],
+					"ogit/_owner" : self.data['ogit/_owner'],
+					"ogit/_type" : "ogit/Organization",
+					"ogit/description" : "created by MARS upload",
+					"ogit/name" : self.data['ogit/_owner']
+				}).push()
+
 	def push(self):
 		try:
 			self.session.create(self.data['ogit/_type'], self.data)
@@ -343,7 +354,16 @@ class GraphitNode(object):
 					self.session.replace('/' + self.data["ogit/_id"], self.data)
 				except KeyError:
 					raise GraphitNodeError("Data invalid, ogit/_id is missing.")
-			else: raise
+				except GraphitError as e:
+					if e.status == 400 and e.message == "owner does not exist":
+						self.create_owner()
+						self.push()
+					else: raise
+			elif e.status == 400 and e.message == "owner does not exist":
+				self.create_owner()
+				self.push()
+			else:
+				raise
 		#self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
 
 	def delete(self):
