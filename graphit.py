@@ -3,6 +3,7 @@ import requests
 import requests.auth
 import time
 import json
+import re
 #import hashlib
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from lxml import etree as et
@@ -331,6 +332,7 @@ class GraphitNode(object):
 	def __init__(self, session, data):
 		self.data = data
 		self.session=session
+		self.owner_error_regex = re.compile(r'owner ([a-z0-9\-._]+ )?does not exist')
 
 	def create_owner(self, owner=None):
 		if not owner: owner=self.data['ogit/_owner']
@@ -355,11 +357,11 @@ class GraphitNode(object):
 				except KeyError:
 					raise GraphitNodeError("Data invalid, ogit/_id is missing.")
 				except GraphitError as e:
-					if e.status == 400 and e.message == "owner does not exist":
+					if e.status == 400 and self.owner_error_regex.match(e.message):
 						self.create_owner()
 						self.push()
 					else: raise
-			elif e.status == 400 and e.message == "owner does not exist":
+			elif e.status == 400 and self.owner_error_regex.match(e.message):
 				self.create_owner()
 				self.push()
 			else:
