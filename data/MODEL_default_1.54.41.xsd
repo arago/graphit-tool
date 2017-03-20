@@ -1290,7 +1290,7 @@
               </xs:documentation>
             </xs:annotation>
           </xs:element>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Machine" use="required">
           <xs:annotation>
@@ -1468,7 +1468,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Software" use="required">
           <xs:annotation>
@@ -1665,7 +1665,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Resource" use="required">
           <xs:annotation>
@@ -1688,7 +1688,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Application" use="required">
           <xs:annotation>
