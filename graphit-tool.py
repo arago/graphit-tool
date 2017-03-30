@@ -10,7 +10,7 @@ Usage:
   graphit-tool [options] mars sync (--count-unsynced|--list-unsynced)
   graphit-tool [options] token (info|get)
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
-  graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] NODEID...
+  graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
   graphit-tool [options] vertex get OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
 
@@ -19,7 +19,7 @@ Switches:
   -f FIELD, --field=FIELD    Return only given fields
   -p, --pretty               Pretty print JSON data
   -c, --count                return the number of results, not the results themselves
-  -C NUM, --chunk-size=NUM   Upload NUM MARS nodes in parallel [default=10]
+  -C NUM, --chunk-size=NUM   Upload NUM MARS nodes in parallel
   -h, --help                 print help and exit
 
 Options:
@@ -40,6 +40,7 @@ sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
 if __name__ == '__main__':
 	args = docopt(__doc__, version='graphit-tool 0.2.1')
+	if not args['--chunk-size']: args['--chunk-size'] = 10
 
 	config = ConfigParser(dict_type=CaseInsensitiveDict)
 	config.read(['/etc/graphit-tool.conf', os.path.expanduser('~/.graphit-tool.conf')])
@@ -254,8 +255,8 @@ if __name__ == '__main__':
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
 
-	if args['issue'] and args['getevent']:
-		q = IDQuery(args['NODEID'])
+	if args['issue'] and args['getevent'] and args['IID']:
+		q = IDQuery(args['IID'])
 		try:
 			def print_event(node):
 				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
