@@ -2,23 +2,28 @@
 """graphit-tool
 
 Usage:
-  graphit-tool [options] mars list [PATTERN]...
-  graphit-tool [options] mars put FILE...
+  graphit-tool [options] mars list[--count] [PATTERN]...
+  graphit-tool [options] mars put [--chunk-size=NUM] FILE...
   graphit-tool [options] mars get [--out=DIR] NODEID...
-  graphit-tool [options] mars del NODEID...
+  graphit-tool [options] mars del [--chunk-size=NUM] [--del-ci] NODEID...
+  graphit-tool [options] mars sync NODEID...
+  graphit-tool [options] mars sync (--count-unsynced|--list-unsynced)
   graphit-tool [options] token (info|get)
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
+  graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] NODEID...
   graphit-tool [options] vertex get OGITID...
-  graphit-tool [options] vertex query [--field=FIELD...] [--pretty] [--] QUERY...
+  graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
 
 Switches:
-  -o DIR, --out=DIR        save node to <node_id>.xml in given directory
-  -f FIELD, --field=FIELD  Return only given fields
-  -p, --pretty             Pretty print JSON data
-  -h, --help               print help and exit
+  -o DIR, --out=DIR          save node to <node_id>.xml in given directory
+  -f FIELD, --field=FIELD    Return only given fields
+  -p, --pretty               Pretty print JSON data
+  -c, --count                return the number of results, not the results themselves
+  -C NUM, --chunk-size=NUM   Upload NUM MARS nodes in parallel [default=10]
+  -h, --help                 print help and exit
 
 Options:
-  -d, --debug              print debug messages
+  -d, --debug                print debug messages
 """
 import sys
 from gevent import monkey; monkey.patch_all()
@@ -64,9 +69,14 @@ if __name__ == '__main__':
 		q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"]})
 		if args['PATTERN']: q.add({"+ogit/_id":args['PATTERN']})
 		try:
-			for r in session.query(q, fields=['ogit/_id']):
-				print >>sys.stdout, r['ogit/_id']
-			sys.exit(0)
+			if args['--count']:
+				for r in session.query(q, fields=['ogit/_id'], count=args['--count']):
+					print >>sys.stdout, r
+				sys.exit(0)
+			else:
+				for r in session.query(q, fields=['ogit/_id']):
+					print >>sys.stdout, r['ogit/_id']
+				sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
@@ -97,15 +107,29 @@ if __name__ == '__main__':
 	if args['mars'] and args['del']:
 		def delete_node(node):
 			try:
-				q2 = VerbQuery(node, "ogit/corresponds", ogit_types=['ogit/ConfigurationItem'])
-				for item in session.query(q2, fields=['ogit/_id']):
-					print >>sys.stderr, "Deleted corresponding ogit/ConfigurationItem {id}".format(id=item['ogit/_id'])
-					GraphitNode(session, {'ogit/_id':item['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
+				if args['--del-ci']:
+					q2 = VerbQuery(node, "ogit/corresponds", ogit_types=['ogit/ConfigurationItem'])
+					for item in session.query(q2, fields=['ogit/_id']):
+						print >>sys.stderr, "Deleted corresponding ogit/ConfigurationItem {id}".format(id=item['ogit/_id'])
+						GraphitNode(session, {'ogit/_id':item['ogit/_id'], 'ogit/_type':'ogit/ConfigurationItem'}).delete()
 				MARSNode(session, {'ogit/_id':node,'ogit/_type':'ogit/Automation/MARSNode'}).delete()
 				print >>sys.stderr, "Deleted {id}".format(id = node)
 			except GraphitNodeError as e:
 				print >>sys.stderr, e
-		for chunk in chunks(args['NODEID']):
+			except GraphitError as e:
+				print >>sys.stderr, "Failed to delete node {nodeid}: {e}".format(
+					nodeid=node, e=e)
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		for chunk in chunks(args['NODEID'], size=size):
 			jobs = [gevent.spawn(delete_node, n) for n in chunk]
 			gevent.joinall(jobs)
 		sys.exit(0)
@@ -121,10 +145,47 @@ if __name__ == '__main__':
 				print >>sys.stderr, e
 			except GraphitError as e:
 				print >>sys.stdout, e
-		for chunk in chunks(args['FILE']):
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		for chunk in chunks(args['FILE'], size=size):
 			jobs = [gevent.spawn(upload_file, f) for f in chunk]
 			gevent.joinall(jobs)
 		sys.exit(0)
+
+	if args['mars'] and args['sync']:
+		def sync_node(node):
+			MARSNode(session, {
+				'ogit/_id':node,
+				'ogit/_type':'ogit/Automation/MARSNode',
+				'ogit/Automation/deployStatus': None,
+				'ogit/Automation/isDeployed': None }).update()
+		try:
+			if args['--count-unsynced']:
+				q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"], "+ogit/Automation/isDeployed":["false"]})
+				for r in session.query(q, count=True):
+					print r
+				sys.exit(0)
+			elif args['--list-unsynced']:
+				q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"], "+ogit/Automation/isDeployed":["false"]})
+				for r in session.query(q, fields=['ogit/_id']):
+					print >>sys.stdout, r['ogit/_id']
+				sys.exit(0)
+			else:
+				for chunk in chunks(args['NODEID']):
+					jobs = [gevent.spawn(sync_node, n) for n in chunk]
+					gevent.joinall(jobs)
+				sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot trigger syncing of nodes: {err}".format(err=e)
+			sys.exit(5)
 
 	if args['token'] and args['info']:
 		print >>sys.stdout, session.auth
@@ -176,8 +237,33 @@ if __name__ == '__main__':
 			arr=cond.split(':', 1)
 			q.add({arr[0]:arr[1]})
 		try:
-			for r in session.query(q, fields=args['--field']):
-				print >>sys.stdout, GraphitNode(session,r).json(pretty_print=args['--pretty'])
+			if args['--count']:
+				for r in session.query(q, fields=['ogit/_id'], count=args['--count']):
+					print >>sys.stdout, r
+				sys.exit(0)
+			else:
+				if args['--list']:
+					args['--field'] = ["ogit/_id"]
+				for r in session.query(q, fields=args['--field']):
+					if args['--list']:
+						print >>sys.stdout, GraphitNode(session,r).data['ogit/_id']
+					else:
+						print >>sys.stdout, GraphitNode(session,r).json(pretty_print=args['--pretty'])
+				sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
+
+	if args['issue'] and args['getevent']:
+		q = IDQuery(args['NODEID'])
+		try:
+			def print_event(node):
+				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
+				for item in session.query(q2, fields=args['--field']):
+					print >>sys.stdout, GraphitNode(session,item).json(pretty_print=args['--pretty'])
+			for chunk in chunks(session.query(q, fields=['ogit/_id'])):
+				jobs = [gevent.spawn(print_event, n) for n in chunk]
+				gevent.joinall(jobs)
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
