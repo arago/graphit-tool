@@ -57,9 +57,9 @@ class GraphitSession(requests.Session):
 	def create(self, ogit_type, data):
 		return self.request(
 			'POST', '/new/' + quote_plus(ogit_type), data=data)
-	def query(self, query, limit=-1,
-			   offset=0, fields=None, concurrent=10, chunksize=100):
-		return QueryResult(self, query,
+	def query(self, query, limit=-1, offset=0, fields=None, count=False,
+			  concurrent=10, chunksize=100):
+		return QueryResult(self, query, count=count,
 					 limit=limit, offset=offset, fields=fields,
 					 concurrent=concurrent, chunksize=chunksize)
 
@@ -246,6 +246,9 @@ class VerbQuery(object):
 		self.verb = verb
 		self.ogit_types=ogit_types
 
+	def __str__(self):
+		return ""
+
 class IDNotFoundError(Exception):
 	"""Error when retrieving results"""
 	def __init__(self, ID):
@@ -255,7 +258,7 @@ class IDNotFoundError(Exception):
 	def __str__(self):
 		return self.message
 
-def QueryResult(graph, query, limit=-1, offset=0, fields=None, concurrent=10, chunksize=10):
+def QueryResult(graph, query, count=False, limit=-1, offset=0, fields=None, concurrent=10, chunksize=10):
 	def get_values(ogit_ids):
 		data = {"query":",".join(ogit_ids)}
 		if fields: data['fields'] = ', '.join(fields)
@@ -266,8 +269,22 @@ def QueryResult(graph, query, limit=-1, offset=0, fields=None, concurrent=10, ch
 		)['items']
 
 	if type(query) is IDQuery:
+		if count:
+			yield len(query.node_ids)
+			raise StopIteration()
 		result_ids = query.node_ids
 	elif type(query) is ESQuery:
+		if count:
+			yield int(graph.request(
+			'POST', '/query/' + query.query_type,
+			data={
+				"query":str(query),
+				"fields":'ogit/_id',
+				"limit":limit,
+				"count":True,
+				"offset":offset
+			})['items'][0])
+			raise StopIteration()
 		result_ids = (i['ogit/_id'] for i in graph.request(
 			'POST', '/query/' + query.query_type,
 			data={
@@ -344,6 +361,9 @@ class GraphitNode(object):
 					"ogit/description" : "created by MARS upload",
 					"ogit/name" : self.data['ogit/_owner']
 				}).push()
+
+	def update(self):
+		self.session.update('/' + self.data["ogit/_id"], self.data)
 
 	def push(self):
 		try:
