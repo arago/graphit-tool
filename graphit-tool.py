@@ -3,7 +3,7 @@
 
 Usage:
   graphit-tool [options] mars list[--count] [PATTERN]...
-  graphit-tool [options] mars put [--chunk-size=NUM] FILE...
+  graphit-tool [options] mars put [--chunk-size=NUM] [--replace] FILE...
   graphit-tool [options] mars get [--out=DIR] NODEID...
   graphit-tool [options] mars del [--chunk-size=NUM] [--del-ci] NODEID...
   graphit-tool [options] mars sync NODEID...
@@ -20,6 +20,8 @@ Switches:
   -p, --pretty               Pretty print JSON data
   -c, --count                return the number of results, not the results themselves
   -C NUM, --chunk-size=NUM   Upload NUM MARS nodes in parallel
+  -R, --replace              Replace existing nodes instead of updating them. Before 0.3.2, this
+                             was the default behavior.
   -h, --help                 print help and exit
 
 Options:
@@ -39,7 +41,7 @@ sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
 if __name__ == '__main__':
-	args = docopt(__doc__, version='graphit-tool 0.2.1')
+	args = docopt(__doc__, version='graphit-tool 0.3.2')
 	if not args['--chunk-size']: args['--chunk-size'] = 10
 
 	config = ConfigParser(dict_type=CaseInsensitiveDict)
@@ -140,7 +142,7 @@ if __name__ == '__main__':
 		def upload_file(filename):
 			try:
 				mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
-				mars_node.push()
+				mars_node.push(replace=args['--replace'])
 				print >>sys.stdout, mars_node.data["ogit/_id"] + " successfully uploaded!"
 			except MARSNodeError as e:
 				print >>sys.stderr, e
