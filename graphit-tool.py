@@ -30,7 +30,7 @@ Options:
 import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
-import gevent
+import gevent, gevent.pool
 from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
 from docopt import docopt
 from ConfigParser import ConfigParser
@@ -132,9 +132,10 @@ if __name__ == '__main__':
 		except IndexError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
-		for chunk in chunks(args['NODEID'], size=size):
-			jobs = [gevent.spawn(delete_node, n) for n in chunk]
-			gevent.joinall(jobs)
+		pool = gevent.pool.Pool(size)
+		for n in args['NODEID']:
+			pool.spawn(delete_node, n)
+		pool.join()
 		sys.exit(0)
 
 	if args['mars'] and args['put'] and args['FILE']:
@@ -158,9 +159,10 @@ if __name__ == '__main__':
 		except IndexError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
-		for chunk in chunks(args['FILE'], size=size):
-			jobs = [gevent.spawn(upload_file, f) for f in chunk]
-			gevent.joinall(jobs)
+		pool = gevent.pool.Pool(size)
+		for f in args['FILE']:
+			pool.spawn(upload_file, f)
+		pool.join()
 		sys.exit(0)
 
 	if args['mars'] and args['sync']:
@@ -182,9 +184,10 @@ if __name__ == '__main__':
 					print >>sys.stdout, r['ogit/_id']
 				sys.exit(0)
 			else:
-				for chunk in chunks(args['NODEID']):
-					jobs = [gevent.spawn(sync_node, n) for n in chunk]
-					gevent.joinall(jobs)
+				pool=gevent.pool.Pool(size)
+				for n in args['NODEID']:
+					pool.spawn(sync_node, n)
+				pool.join()
 				sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot trigger syncing of nodes: {err}".format(err=e)
@@ -226,9 +229,10 @@ if __name__ == '__main__':
 				else:
 					print >>sys.stdout, "{node} has {no} corresponding vertices.".format(
 						node=node['ogit/_id'], no=no_conn)
-			for chunk in chunks(session.query(q, fields=['ogit/_id'])):
-				jobs = [gevent.spawn(delete_if_orphan, n) for n in chunk]
-				gevent.joinall(jobs)
+			pool=gevent.pool(10)
+			for n in session.query(q, fields=['ogit/_id']):
+				pool.spawn(delete_if_orphan, n)
+			pool.join()
 			sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
