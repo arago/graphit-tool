@@ -144,7 +144,7 @@ if __name__ == '__main__':
 			try:
 				mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
 				mars_node.push(replace=args['--replace'])
-				print >>sys.stdout, mars_node.data["ogit/_id"] + " successfully uploaded!"
+				return (filename, mars_node.data["ogit/_id"])
 			except MARSNodeError as e:
 				print >>sys.stderr, e
 			except GraphitError as e:
@@ -159,10 +159,8 @@ if __name__ == '__main__':
 		except IndexError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
-		pool = gevent.pool.Pool(size)
-		for f in args['FILE']:
-			pool.spawn(upload_file, f)
-		pool.join()
+		for filename, ogit_id in gevent.pool.Pool(size).imap_unordered(upload_file, args['FILE']):
+			print >>sys.stdout, ogit_id + " (read from " + filename + ") successfully uploaded!"
 		sys.exit(0)
 
 	if args['mars'] and args['sync']:
