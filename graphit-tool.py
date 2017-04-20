@@ -10,9 +10,11 @@ Usage:
   graphit-tool [options] mars sync (--count-unsynced|--list-unsynced)
   graphit-tool [options] token (info|get)
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
+  graphit-tool [options] ci create --attr=ATTR NODEID...
   graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
   graphit-tool [options] vertex get OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
+  graphit-tool [options] vertex setattr --attr=ATTR --value=VALUE NODEID...
 
 Switches:
   -o DIR, --out=DIR          save node to <node_id>.xml in given directory
@@ -36,6 +38,8 @@ from docopt import docopt
 from ConfigParser import ConfigParser
 from requests.structures import CaseInsensitiveDict
 import os
+import re
+import json
 
 sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 sys.stderr = codecs.getwriter('utf8')(sys.stderr)
@@ -171,6 +175,16 @@ if __name__ == '__main__':
 				'ogit/Automation/deployStatus': None,
 				'ogit/Automation/isDeployed': None }).update()
 		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		try:
 			if args['--count-unsynced']:
 				q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"], "+ogit/Automation/isDeployed":["false"]})
 				for r in session.query(q, count=True):
@@ -227,7 +241,7 @@ if __name__ == '__main__':
 				else:
 					print >>sys.stdout, "{node} has {no} corresponding vertices.".format(
 						node=node['ogit/_id'], no=no_conn)
-			pool=gevent.pool(10)
+			pool=gevent.pool.Pool(10)
 			for n in session.query(q, fields=['ogit/_id']):
 				pool.spawn(delete_if_orphan, n)
 			pool.join()
@@ -235,6 +249,74 @@ if __name__ == '__main__':
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
+
+	if args['ci'] and args['create'] and args['NODEID']:
+		hostname_regex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
+		def create_missing_ci(mars_id):
+			try:
+				mars_node = MARSNode.from_graph(session, mars_id)
+				#print mars_node.json(pretty_print=True)
+			except GraphitError as e:
+				if e.status == 404:
+					print >>sys.stdout, "{id}: Failure, node does not exists.".format(id=mars_id)
+				else:
+					print >>sys.stdout, "{id}: Failure: {err}".format(id=mars_id, err=e)
+				return
+			if (args['--attr'] == '_SHORTNAME_'
+				and mars_node.get_attr('/NodeType') != 'Machine'):
+				print >>sys.stdout, mars_id + ": _SHORTNAME_ not applicable, works only with machine nodes."
+				return
+			elif (args['--attr'] == '_SHORTNAME_'
+				  and mars_node.get_attr('/NodeType') == 'Machine'
+				  and not hostname_regex.match(mars_node.get_attr('/NodeName'))):
+				print >>sys.stdout, "{id}: _SHORTNAME_ not applicable, '{nn}' is not a valid FQDN'".format(
+					id=mars_id,
+					nn=mars_node.get_attr('/NodeName'))
+				return
+			elif (args['--attr'] == '_SHORTNAME_'
+				  and mars_node.get_attr('/NodeType') == 'Machine'
+				  and hostname_regex.match(mars_node.get_attr('/NodeName'))):
+				new_id = mars_node.get_attr('/NodeName').split('.', 1)[0]
+			elif mars_node.get_attr(args['--attr']):
+				try:
+					new_id = json.loads(mars_node.get_attr(args['--attr']))['items'][0][0]
+				except ValueError:
+					new_id = mars_node.get_attr(args['--attr'])
+			else:
+				print >>sys.stdout, "{id}: Failure, node doesn't have an attribute '{attr}'".format(
+					id=mars_id, attr=args['--attr'])
+				return
+			q = ESQuery()
+			q.add({'ogit/id':[new_id]})
+			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
+				print "{id}: ConfigurationItem with ogit/id '{c}' already exists".format(
+					id=mars_id, c=new_id)
+				return
+			data =   {
+				"ogit/_owner" : mars_node.get_attr('ogit/_owner'),
+				"ogit/_type" : "ogit/ConfigurationItem",
+				"ogit/ciType" : mars_node.get_attr('/NodeType'),
+				"ogit/id" : new_id,
+				"ogit/name" : new_id
+			}
+			ci_node = GraphitNode(session, data)
+			print(ci_node.json(pretty_print=True))
+			ci_node.push()
+			mars_node.connect('ogit/corresponds', ci_node)
+			print >>sys.stdout, mars_id + ": ConfigurationItem created: " + ci_node.data['ogit/_id']
+			return
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		list(gevent.pool.Pool(size).imap_unordered(create_missing_ci, args['NODEID']))
+		sys.exit(0)
 
 	if args['vertex'] and args['query']:
 		q = ESQuery()
@@ -258,6 +340,35 @@ if __name__ == '__main__':
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
+
+	if args['vertex'] and args['setattr'] and args['--attr'] and args['NODEID']:
+		def set_vertex_attr(node):
+			data = {
+				'ogit/_id':node['ogit/_id'],
+				'ogit/_type':node['ogit/_type'],
+				args['--attr']:args['--value']
+			}
+			GraphitNode(session, data).update()
+			print >>sys.stdout, "Attribute '{att}' of node '{id}' set to '{val}'".format(
+				att=args['--attr'],
+				id=node['ogit/_id'],
+				val=args['--value'])
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		pool = gevent.pool.Pool(size)
+		q = IDQuery(args['NODEID'])
+		for r in session.query(q, fields=['ogit/_id','ogit/_type']):
+			pool.spawn(set_vertex_attr, r)
+		pool.join()
+		sys.exit(0)
 
 	if args['issue'] and args['getevent'] and args['IID']:
 		q = IDQuery(args['IID'])

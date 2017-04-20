@@ -54,6 +54,10 @@ class GraphitSession(requests.Session):
 		return self.request('PUT', resource, data=data, params=params)
 	def delete(self, resource):
 		return self.request('DELETE', resource)
+	def connect(self, ogit_type, in_id, out_id):
+		return self.request(
+			'POST', '/connect/' + quote_plus(ogit_type),
+			data={'in':in_id, 'out':out_id})
 	def create(self, ogit_type, data):
 		return self.request(
 			'POST', '/new/' + quote_plus(ogit_type), data=data)
@@ -351,6 +355,11 @@ class GraphitNode(object):
 		self.session=session
 		self.owner_error_regex = re.compile(r'owner ([a-z0-9\-._]+ )?does not exist')
 
+	@classmethod
+	def from_graph(cls, session, ogit_id):
+		data = session.get('/' + quote_plus(ogit_id))
+		return cls(session, data)
+
 	def create_owner(self, owner=None):
 		if not owner: owner=self.data['ogit/_owner']
 		GraphitNode(self.session, {
@@ -362,34 +371,53 @@ class GraphitNode(object):
 					"ogit/name" : self.data['ogit/_owner']
 				}).push()
 
+	def get_attr(self, attr):
+		if attr in self.data:
+			return self.data[attr]
+
+	def set_attr(self, attr, val):
+		self.data[attr]=val
+		self.update()
+
+	def rem_attr(self, attr):
+		self.set_attr(attr, None)
+
+	def connect(self, ogit_type, node):
+		self.session.connect(ogit_type, self.get_attr('ogit/_id'), node.get_attr('ogit/_id'))
+
+	def create(self):
+		try:
+			self.data = self.session.create(self.data['ogit/_type'], self.data)
+		except GraphitError as e:
+			if e.status == 400 and self.owner_error_regex.match(e.message):
+				self.create_owner()
+				self.create()
+			else: raise
+
 	def update(self):
-		self.session.update('/' + self.data["ogit/_id"], self.data)
+		self.session.update('/' + quote_plus(self.data["ogit/_id"]), self.data)
+
+	def pull(self):
+		self.data = self.session.get('/' + quote_plus(self.data['ogit/_id']))
 
 	def push(self, replace=True):
-		try:
-			self.session.create(self.data['ogit/_type'], self.data)
-		except KeyError:
-			raise GraphitNodeError("Data invalid, ogit/_type is missing.")
-		except GraphitError as e:
-			if e.status == 409:
-				try:
-					if replace:
-						self.session.replace('/' + self.data["ogit/_id"], self.data)
-					else:
-						self.session.update('/' + self.data["ogit/_id"], self.data)
-				except KeyError:
-					raise GraphitNodeError("Data invalid, ogit/_id is missing.")
-				except GraphitError as e:
-					if e.status == 400 and self.owner_error_regex.match(e.message):
-						self.create_owner()
-						self.push()
-					else: raise
-			elif e.status == 400 and self.owner_error_regex.match(e.message):
-				self.create_owner()
-				self.push()
-			else:
-				raise
-		#self.session.replace('/' + self.ogit_id, self.data, params={'createIfNotExists':'true', 'ogit/_type':self.ogit_type})
+		if 'ogit/_id' in self.data:
+			try:
+				self.session.update(
+					'/' + quote_plus(self.data["ogit/_id"]),
+					self.data,
+					params={
+						'createIfNotExists':'true',
+						'ogit/_type':self.data['ogit/_type']
+					}
+				)
+			except GraphitError as e:
+				if e.status == 400 and self.owner_error_regex.match(e.message):
+					self.create_owner()
+					self.push()
+				else: raise
+		else:
+			self.create()
 
 	def delete(self):
 		try:
