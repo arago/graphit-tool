@@ -109,27 +109,43 @@ Schema: /usr/share/graphit-tool/MODEL_default.xsd
 graphit-tool
 
 Usage:
-  graphit-tool [options] mars list [PATTERN]...
-  graphit-tool [options] mars put FILE...
+  graphit-tool [options] mars list[--count] [PATTERN]...
+  graphit-tool [options] mars put [--chunk-size=NUM] [--replace] FILE...
   graphit-tool [options] mars get [--out=DIR] NODEID...
-  graphit-tool [options] mars del NODEID...
+  graphit-tool [options] mars del [--chunk-size=NUM] [--del-ci] NODEID...
+  graphit-tool [options] mars sync NODEID...
+  graphit-tool [options] mars sync (--count-unsynced|--list-unsynced)
   graphit-tool [options] token (info|get)
+  graphit-tool [options] ci (count_orphans|cleanup_orphans)
+  graphit-tool [options] ci create --attr=ATTR NODEID...
+  graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
+  graphit-tool [options] vertex get OGITID...
+  graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
+  graphit-tool [options] vertex setattr --attr=ATTR --value=VALUE NODEID...
 
 Switches:
-  -o DIR, --out=DIR  save node to <node_id>.xml in given directory
-  -h, --help         print help and exit
+  -o DIR, --out=DIR          save node to <node_id>.xml in given directory
+  -f FIELD, --field=FIELD    Return only given fields
+  -p, --pretty               Pretty print JSON data
+  -c, --count                return the number of results, not the results themselves
+  -C NUM, --chunk-size=NUM   Upload NUM MARS nodes in parallel
+  -R, --replace              Replace existing nodes instead of updating them. Before 0.3.2, this
+                             was the default behavior.
+  -h, --help                 print help and exit
 
 Options:
-  -d, --debug        print debug messages
+  -d, --debug                print debug messages
   #+END_SRC
-* Changelog
-** graphit-tool-0.1
-   - query, delete, get and put MARS nodes
-   - get current access token
-   - print info about current access token
-** graphit-tool-0.1.1
-   - BUGFIX: Creation of new MARSNodes failed, wrong case in parameter
-   - BUILD: Depend on python-docopt instead of homegrown docopt package
+  
+* Recent Changes
+** 0.3.4
+  - ~ci create~ command to create additional ConfigurationItems
+  - ~vertex setattr~ command to set attributes of GraphitNodes
+** 0.3.3
+  - performance improvements for concurrent operations
+  - enhanced logging when uploading MARSNodes
+** 0.3.2
+  - ~mars put~ for already existing MARSNodes now uses ~POST~ instead of ~PUT~ per default. The old behavior can be restored with the ~--replace~ command line switch.
 
 * License (MIT)
   Copyright (c) 2017 arago GmbH
