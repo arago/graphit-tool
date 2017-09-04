@@ -287,7 +287,6 @@ if __name__ == '__main__':
 					id=mars_id, attr=args['--attr'])
 				return
 			q = ESQuery()
-			q.add({'ogit/id':[new_id]})
 			q.add({'+ogit/id':[new_id]})
 			q.add({'+ogit/_type':['ogit/ConfigurationItem']})
 			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
