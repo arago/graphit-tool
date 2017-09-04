@@ -288,6 +288,8 @@ if __name__ == '__main__':
 				return
 			q = ESQuery()
 			q.add({'ogit/id':[new_id]})
+			q.add({'+ogit/id':[new_id]})
+			q.add({'+ogit/_type':['ogit/ConfigurationItem']})
 			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
 				print "{id}: ConfigurationItem with ogit/id '{c}' already exists".format(
 					id=mars_id, c=new_id)
