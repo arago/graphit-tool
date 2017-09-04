@@ -12,7 +12,7 @@ Usage:
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
   graphit-tool [options] ci create --attr=ATTR NODEID...
   graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
-  graphit-tool [options] vertex get OGITID...
+  graphit-tool [options] vertex get [--field=FIELD...] [--pretty] [--] OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
   graphit-tool [options] vertex setattr --attr=ATTR --value=VALUE NODEID...
 
@@ -324,6 +324,27 @@ if __name__ == '__main__':
 			sys.exit(1)
 		list(gevent.pool.Pool(size).imap_unordered(create_missing_ci, args['NODEID']))
 		sys.exit(0)
+
+	if args['vertex'] and args['get'] and args['OGITID']:
+		q = IDQuery(args['OGITID'])
+		try:
+			if args['--count']:
+				for r in session.query(q, fields=['ogit/_id'], count=args['--count']):
+					print >>sys.stdout, r
+				sys.exit(0)
+			else:
+				if args['--list']:
+					args['--field'] = ["ogit/_id"]
+				for r in session.query(q, fields=args['--field']):
+					print "holla"
+					if args['--list']:
+						print >>sys.stdout, GraphitNode(session,r).data['ogit/_id']
+					else:
+						print >>sys.stdout, GraphitNode(session,r).json(pretty_print=args['--pretty'])
+				sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
 
 	if args['vertex'] and args['query']:
 		q = ESQuery()
