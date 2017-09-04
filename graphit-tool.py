@@ -300,12 +300,15 @@ if __name__ == '__main__':
 				"ogit/id" : new_id,
 				"ogit/name" : new_id
 			}
-			ci_node = GraphitNode(session, data)
-			print(ci_node.json(pretty_print=True))
-			ci_node.push()
-			mars_node.connect('ogit/corresponds', ci_node)
-			print >>sys.stdout, mars_id + ": ConfigurationItem created: " + ci_node.data['ogit/_id']
-			return
+			try:
+				ci_node = GraphitNode(session, data)
+				#print(ci_node.json(pretty_print=True))
+				ci_node.push()
+				mars_node.connect('ogit/corresponds', ci_node)
+				print >>sys.stdout, mars_id + ": ConfigurationItem created: " + ci_node.data['ogit/_id']
+				return
+			except GraphitError as e:
+				print >>sys.stderr, e
 		try:
 			size = int(args['--chunk-size'])
 			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
@@ -314,6 +317,9 @@ if __name__ == '__main__':
 			print >>sys.stderr, "--chunk-size has to be numeric"
 			sys.exit(1)
 		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		except GraphitError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
 		list(gevent.pool.Pool(size).imap_unordered(create_missing_ci, args['NODEID']))
