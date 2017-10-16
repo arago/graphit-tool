@@ -1,0 +1,26 @@
+{
+	"type": "object",
+	"properties": {
+		"ogit/_type": {"type":"string", "enum": ["ogit/Automation/MARSNode"]},
+		"ogit/Automation/marsNodeFormalRepresentation": {"type":"string"},
+		"ogit/_owner": {"type":"string"},
+		"ogit/_id": {"type":"string"},
+		"ogit/Automation/marsNodeType": {
+			"type":"string",
+			"enum": [
+				"Application",
+				"Resource",
+				"Software",
+				"Machine"
+			]
+		},
+		"ogit/id": {"type":"string"},
+		"ogit/name": {"type":"string"}
+	},
+	"required": [
+		"ogit/Automation/marsNodeFormalRepresentation",
+		"ogit/Automation/marsNodeType",
+		"ogit/_owner",
+		"ogit/_id"
+	]
+}
