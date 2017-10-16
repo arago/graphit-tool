@@ -389,7 +389,6 @@ if __name__ == '__main__':
 				if args['--list']:
 					args['--field'] = ["ogit/_id"]
 				for r in session.query(q, fields=args['--field']):
-					print "holla"
 					if args['--list']:
 						print >>sys.stdout, GraphitNode(session,r).data['ogit/_id']
 					else:
