@@ -36,7 +36,7 @@ import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent, gevent.pool
-from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
+from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, JSONValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
 from docopt import docopt
 from ConfigParser import ConfigParser
 from requests.structures import CaseInsensitiveDict
@@ -147,9 +147,19 @@ if __name__ == '__main__':
 
 	if args['mars'] and args['put'] and args['FILE']:
 		mars_validator = XMLValidator(config.get('mars', 'schema'))
+		with open(config.get('mars', 'jsonschema')) as schemafile:
+			json_validator = JSONValidator(schemafile)
 		def upload_file(filename):
 			try:
-				mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
+				try:
+					mars_node = MARSNode.from_xmlfile(session, filename, mars_validator)
+				except MARSNodeError as e:
+					try:
+						mars_node = MARSNode.from_jsonfile(session, filename, mars_validator, json_validator)
+					except MARSNodeError as e2:
+						print >>sys.stderr, e
+						print >>sys.stderr, e2
+						raise MARSNodeError("ERROR: {filename} could not be uploaded!".format(filename=filename))
 				mars_node.push(replace=args['--replace'])
 				return (filename, mars_node.data["ogit/_id"])
 			except MARSNodeError as e:
@@ -166,8 +176,12 @@ if __name__ == '__main__':
 		except IndexError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
-		for filename, ogit_id in gevent.pool.Pool(size).imap_unordered(upload_file, args['FILE']):
-			print >>sys.stdout, ogit_id + " (read from " + filename + ") successfully uploaded!"
+		for result in gevent.pool.Pool(size).imap_unordered(upload_file, args['FILE']):
+			try:
+				filename, ogit_id = result
+				print >>sys.stdout, ogit_id + " (read from " + filename + ") successfully uploaded!"
+			except TypeError:
+				pass
 		sys.exit(0)
 
 	if args['mars'] and args['sync']:
