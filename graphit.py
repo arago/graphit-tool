@@ -491,6 +491,37 @@ class MARSNode(GraphitNode):
 			raise MARSNodeError("ERROR: {f} does not contain valid XML".format(f=filename))
 		return cls(session, data)
 
+	@classmethod
+	def from_jsonfile(cls, session, filename, mars_validator=None, json_validator=None):
+		try:
+			with open(filename) as jsonfile:
+				try:
+					doc=json.load(jsonfile)
+				except ValueError:
+					raise MARSNodeError("ERROR: {f} does not contain valid JSON".format(f=filename))
+			if json_validator:
+				json_validator.validate(doc)
+			xml_doc = et.fromstring(doc['ogit/Automation/marsNodeFormalRepresentation'])
+			if mars_validator:
+				mars_validator.validate(xml_doc)
+			ogit_id = xml_doc.attrib['ID']
+			ogit_name = xml_doc.attrib['NodeName']
+			ogit_automation_marsnodetype = xml_doc.attrib['NodeType']
+			data = {
+				'ogit/Automation/marsNodeFormalRepresentation':et.tostring(xml_doc),
+				'ogit/_owner': xml_doc.attrib['CustomerID'],
+				'ogit/_id': ogit_id,
+				'ogit/_type':'ogit/Automation/MARSNode',
+				'ogit/name':doc['ogit/name'] if 'ogit/name' in doc else ogit_name,
+				'ogit/Automation/marsNodeType': ogit_automation_marsnodetype,
+				'ogit/id':doc['ogit/id'] if 'ogit/id' in doc else ogit_name
+			}
+		except XMLValidateError:
+			raise MARSNodeError("ERROR: 'ogit/Automation/marsNodeFormalRepresentation' in {f} does not contain a valid MARS node".format(f=filename))
+		except JSONValidateError:
+			raise MARSNodeError("ERROR: {f} does not contain valid ogit/Automation/MARSNode JSON".format(f=filename))
+		return cls(session, data)
+
 	def print_node(self, stream):
 		try:
 			print >>stream, prettify_xml(self.data['ogit/Automation/marsNodeFormalRepresentation'])
