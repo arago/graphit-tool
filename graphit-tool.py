@@ -397,6 +397,10 @@ if __name__ == '__main__':
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
+		except GraphitNodeError as e:
+			print >>sys.stderr, e
+			sys.exit(5)
+
 	if args['vertex'] and args['del']:
 		def delete_node(node):
 			try:
