@@ -15,6 +15,7 @@ Usage:
   graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
   graphit-tool [options] vertex get [--field=FIELD...] [--pretty] [--] OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
+  graphit-tool [options] vertex del [--] OGITID...
   graphit-tool [options] vertex setattr --attr=ATTR --value=VALUE NODEID...
   graphit-tool [options] vertex delattr --attr=ATTR NODEID...
 
@@ -397,6 +398,31 @@ if __name__ == '__main__':
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
+	if args['vertex'] and args['del']:
+		def delete_node(node):
+			try:
+				GraphitNode(session, {'ogit/_id':node}).delete()
+				print >>sys.stderr, "Deleted {id}".format(id = node)
+			except GraphitNodeError as e:
+				print >>sys.stderr, e
+			except GraphitError as e:
+				print >>sys.stderr, "Failed to delete node {nodeid}: {e}".format(
+					nodeid=node, e=e)
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		pool = gevent.pool.Pool(size)
+		for n in args['OGITID']:
+			pool.spawn(delete_node, n)
+		pool.join()
+		sys.exit(0)
 
 	if args['vertex'] and args['query']:
 		q = ESQuery()
