@@ -251,7 +251,7 @@ if __name__ == '__main__':
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
 
-	if args['ci'] and args['create'] and args['NODEID']:
+	if args['ci'] and args['create'] and args['--attr'] and type(args['NODEID']) == type([]):
 		hostname_regex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
 		def create_missing_ci(mars_id):
 			try:
