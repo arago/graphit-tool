@@ -17,5 +17,5 @@ distutils.core.setup(name=name,
 
     scripts=['graphit-tool.py'],
     py_modules=['graphit'],
-    data_files=[('/etc', ['conf/graphit-tool.conf']), ('/usr/share/graphit-tool', ['data/MODEL_default.xsd', 'data/MODEL_default_1.54.41.xsd'])]
+    data_files=[('/etc', ['conf/graphit-tool.conf']), ('/usr/share/graphit-tool', ['data/MODEL_default.xsd', 'data/json_marsnode.json'])]
 )
