@@ -9,6 +9,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from lxml import etree as et
 from itertools import islice, chain
 from urllib import quote_plus
+import jsonschema
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -336,6 +337,26 @@ class XMLValidator(object):
 		if self.xml_schema.validate(xml_doc):
 			return True
 		raise XMLValidateError()
+
+class JSONValidateError(Exception):
+	def __init__(self, msg=None):
+		self.message=msg if msg else "JSON invalid!"
+
+	def __str__(self):
+		return self.message
+
+class JSONValidator(object):
+	def __init__(self, schemafile):
+		try:
+			self.json_schema = json.load(schemafile)
+		except Exception as e:
+			raise
+	def validate(self, doc):
+		try:
+			jsonschema.validate(doc, self.json_schema)
+			return True
+		except jsonschema.ValidationError as e:
+			raise JSONValidateError(e)
 
 def prettify_xml(string):
 	p = et.XMLParser(remove_blank_text=True)
