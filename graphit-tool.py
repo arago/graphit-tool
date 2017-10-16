@@ -15,6 +15,7 @@ Usage:
   graphit-tool [options] vertex get [--field=FIELD...] [--pretty] [--] OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
   graphit-tool [options] vertex setattr --attr=ATTR --value=VALUE NODEID...
+  graphit-tool [options] vertex delattr --attr=ATTR NODEID...
 
 Switches:
   -o DIR, --out=DIR          save node to <node_id>.xml in given directory
@@ -381,6 +382,34 @@ if __name__ == '__main__':
 				att=args['--attr'],
 				id=node['ogit/_id'],
 				val=args['--value'])
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		pool = gevent.pool.Pool(size)
+		q = IDQuery(args['NODEID'])
+		for r in session.query(q, fields=['ogit/_id','ogit/_type']):
+			pool.spawn(set_vertex_attr, r)
+		pool.join()
+		sys.exit(0)
+
+	if args['vertex'] and args['delattr'] and args['--attr'] and args['NODEID']:
+		def set_vertex_attr(node):
+			data = {
+				'ogit/_id':node['ogit/_id'],
+				'ogit/_type':node['ogit/_type'],
+				args['--attr']:None
+			}
+			GraphitNode(session, data).update()
+			print >>sys.stdout, "Attribute '{att}' of node '{id}' deleted".format(
+				att=args['--attr'],
+				id=node['ogit/_id'])
 		try:
 			size = int(args['--chunk-size'])
 			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
