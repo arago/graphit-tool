@@ -252,7 +252,7 @@ if __name__ == '__main__':
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
 			sys.exit(5)
 
-	if args['ci'] and args['create'] and args['--attr'] and type(args['NODEID']) == type([]):
+	if args['ci'] and args['create'] and args['--attr'] and args['NODEID']:
 		hostname_regex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
 		def create_missing_ci(mars_id):
 			try:
@@ -327,9 +327,7 @@ if __name__ == '__main__':
 		list(gevent.pool.Pool(size).imap_unordered(create_missing_ci, args['NODEID']))
 		sys.exit(0)
 
-
-	if args['ci'] and args['create'] and args['--value'] and type(args['NODEID']) == type(""):
-		hostname_regex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
+	if args['ci'] and args['create'] and args['--value'] and args['NODEID']:
 		def create_missing_ci(mars_id):
 			try:
 				mars_node = MARSNode.from_graph(session, mars_id)
@@ -375,7 +373,7 @@ if __name__ == '__main__':
 		except GraphitError as e:
 			print >>sys.stderr, e
 			sys.exit(1)
-		create_missing_ci(args['NODEID'])
+		create_missing_ci(args['NODEID'][0])
 		sys.exit(0)
 
 
