@@ -11,6 +11,7 @@ Usage:
   graphit-tool [options] token (info|get)
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
   graphit-tool [options] ci create --attr=ATTR NODEID...
+  graphit-tool [options] ci create --value=ATTR NODEID
   graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
   graphit-tool [options] vertex get [--field=FIELD...] [--pretty] [--] OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
@@ -325,6 +326,58 @@ if __name__ == '__main__':
 			sys.exit(1)
 		list(gevent.pool.Pool(size).imap_unordered(create_missing_ci, args['NODEID']))
 		sys.exit(0)
+
+
+	if args['ci'] and args['create'] and args['--value'] and type(args['NODEID']) == type(""):
+		hostname_regex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
+		def create_missing_ci(mars_id):
+			try:
+				mars_node = MARSNode.from_graph(session, mars_id)
+			except GraphitError as e:
+				if e.status == 404:
+					print >>sys.stdout, "{id}: Failure, node does not exists.".format(id=mars_id)
+				else:
+					print >>sys.stdout, "{id}: Failure: {err}".format(id=mars_id, err=e)
+				return
+			new_id = args['--value']
+			q = ESQuery()
+			q.add({'+ogit/id':[new_id]})
+			q.add({'+ogit/_type':['ogit/ConfigurationItem']})
+			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
+				print "{id}: ConfigurationItem with ogit/id '{c}' already exists".format(
+					id=mars_id, c=new_id)
+				return
+			data =   {
+				"ogit/_owner" : mars_node.get_attr('ogit/_owner'),
+				"ogit/_type" : "ogit/ConfigurationItem",
+				"ogit/ciType" : mars_node.get_attr('/NodeType'),
+				"ogit/id" : new_id,
+				"ogit/name" : new_id
+			}
+			try:
+				ci_node = GraphitNode(session, data)
+				ci_node.push()
+				mars_node.connect('ogit/corresponds', ci_node)
+				print >>sys.stdout, mars_id + ": ConfigurationItem created: " + ci_node.data['ogit/_id']
+				return
+			except GraphitError as e:
+				print >>sys.stderr, e
+		try:
+			size = int(args['--chunk-size'])
+			if not size >= 1: raise IndexError("--chunk-size has to be >=1")
+			if size > 9223372036854775808: raise IndexError("--chunk-size has to be <= 9223372036854775808")
+		except ValueError:
+			print >>sys.stderr, "--chunk-size has to be numeric"
+			sys.exit(1)
+		except IndexError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		except GraphitError as e:
+			print >>sys.stderr, e
+			sys.exit(1)
+		create_missing_ci(args['NODEID'])
+		sys.exit(0)
+
 
 	if args['vertex'] and args['get'] and args['OGITID']:
 		q = IDQuery(args['OGITID'])
