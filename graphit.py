@@ -329,8 +329,8 @@ class XMLValidateError(Exception):
 		return self.message
 
 class XMLValidator(object):
-	def __init__(self, xsd):
-		xml_schema_doc = et.parse(xsd)
+	def __init__(self, xsdfile):
+		xml_schema_doc = et.parse(xsdfile)
 		self.xml_schema = et.XMLSchema(xml_schema_doc)
 	def validate(self, xml_doc):
 		if self.xml_schema.validate(xml_doc):
