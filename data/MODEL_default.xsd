@@ -3,7 +3,7 @@
            targetNamespace="https://graphit.co/schemas/v2/MARSSchema" 
            xmlns:aae="https://graphit.co/schemas/v2/MARSSchema"
            elementFormDefault="qualified"
-           version="5.3.5" >
+           version="5.3.6" >
 
   <!-- Attribute Definition for reused Attributes in all Node Levels -->
 
@@ -499,6 +499,7 @@
       <xs:enumeration value="EnterpriseIQ" />
       <xs:enumeration value="Epicor" />
       <xs:enumeration value="EpicorERP" />
+      <xs:enumeration value="ExchangeServer" />
       <xs:enumeration value="Equalizer" />
       <xs:enumeration value="eTrustAS" />
       <xs:enumeration value="ExpressionEngine" />
@@ -536,6 +537,7 @@
       <xs:enumeration value="HPOpenView" />
       <xs:enumeration value="HSQLDB" />
       <xs:enumeration value="htdig" />
+      <xs:enumeration value="IBMDomino" />
       <xs:enumeration value="IDSCNetwise" />
       <xs:enumeration value="IIS" />
       <xs:enumeration value="IndividualApplication" />
@@ -1290,7 +1292,7 @@
               </xs:documentation>
             </xs:annotation>
           </xs:element>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Machine" use="required">
           <xs:annotation>
@@ -1468,7 +1470,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Software" use="required">
           <xs:annotation>
@@ -1665,7 +1667,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Resource" use="required">
           <xs:annotation>
@@ -1688,7 +1690,7 @@
     <xs:complexContent>
       <xs:extension base="aae:CommonNodeType">
         <xs:sequence>
-          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+          <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" />
         </xs:sequence>
         <xs:attribute name="NodeType" type="aae:NodeType" fixed="Application" use="required">
           <xs:annotation>
@@ -3559,6 +3561,19 @@
       </xs:complexContent>
     </xs:complexType>
   </xs:element>
+  <xs:element name="ExchangeServer">
+    <xs:annotation>
+      <xs:documentation>Microsoft Exchange Server is a mail server and calendaring server developed by Microsoft.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="aae:MailServerAttributes">
+          <xs:attribute use="required" name="SoftwareSubClass" type="aae:SoftwareSubClass"
+                        fixed="ExchangeServer" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="ExpressionEngine">
     <xs:complexType>
       <xs:complexContent>
@@ -3903,6 +3918,19 @@
         <xs:extension base="aae:ProductivityAttributes">
           <xs:attribute use="required" name="SoftwareSubClass" type="aae:SoftwareSubClass"
                         fixed="LotusSymphony" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="IBMDomino">
+    <xs:annotation>
+      <xs:documentation>IBM Domino (formerly IBM Lotus Domino) is an advanced platform for hosting social business applications. It delivers scalable, security-rich applications at a low cost, helping you improve productivity, accelerate operations and enhance decision-making.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="aae:ProductivityAttributes">
+          <xs:attribute use="required" name="SoftwareSubClass" type="aae:SoftwareSubClass"
+                        fixed="IBMDomino" />
         </xs:extension>
       </xs:complexContent>
     </xs:complexType>
