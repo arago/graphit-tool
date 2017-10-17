@@ -12,6 +12,7 @@ Usage:
   graphit-tool [options] ci (count_orphans|cleanup_orphans)
   graphit-tool [options] ci create --attr=ATTR NODEID...
   graphit-tool [options] ci create --value=ATTR NODEID
+  graphit-tool [options] issue list [--all] [--details] [--count] [--status=STATUS]... [PATTERN]...
   graphit-tool [options] issue getevent [--field=FIELD...] [--pretty] IID...
   graphit-tool [options] vertex get [--field=FIELD...] [--pretty] [--] OGITID...
   graphit-tool [options] vertex query [--count] [--list] [--field=FIELD...] [--pretty] [--] QUERY...
@@ -91,6 +92,50 @@ if __name__ == '__main__':
 				sys.exit(0)
 		except GraphitError as e:
 			print >>sys.stderr, "Cannot list nodes: {err}".format(err=e)
+			sys.exit(5)
+
+	if args['issue'] and args['list']:
+		q = EESQuery(['+ogit/_type:"ogit/Automation/AutomationIssue"', '+ogit/_type:*'], 'AND')
+		if args['PATTERN']:
+			q.append(["+ogit/subject:{pat}".format(pat=pattern) for pattern in args['PATTERN']])
+		if args['--status']:
+			q.append(EESQuery(["ogit/status:\"{stat}\"".format(stat=status) for status in args['--status']], 'OR'))
+		if not args['--all']:
+			q.append(
+				EESQuery(
+					[
+						EESQuery(["ogit/status:RESOLVED", "ogit/_modified-on:[now-12h TO now]"], 'AND'),
+						EESQuery(["ogit/status:RESOLVED_EXTERNAL", "ogit/_modified-on:[now-12h TO now]"], 'AND'),
+						"ogit/status:PROCESSING",
+						"ogit/status:EJECTED",
+						"ogit/status:WAITING"
+					], 'OR')
+			)
+		print q
+		try:
+			fields=['ogit/_id']
+			if args['--count']:
+				for r in session.query(q, fields=fields, count=args['--count']):
+					print >>sys.stdout, r
+				sys.exit(0)
+			else:
+				if args['--details']:
+					fields.append('ogit/status')
+					fields.append('ogit/subject')
+				else:
+					fields=['ogit/_id']
+				for r in session.query(q, fields=fields):
+					if args['--details']:
+						print >>sys.stdout, "{id}\t{status:17}\t{subject}".format(
+							id=r['ogit/_id'],
+							subject=r['ogit/subject'],
+							status=r['ogit/status']
+						)
+					else:
+						print >>sys.stdout, r['ogit/_id']
+				sys.exit(0)
+		except GraphitError as e:
+			print >>sys.stderr, "Cannot list issues: {err}".format(err=e)
 			sys.exit(5)
 
 	if args['mars'] and args['get']:
