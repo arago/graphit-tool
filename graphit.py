@@ -172,6 +172,66 @@ class WSO2Error(Exception):
 	def __str__(self):
 		return self.message
 
+class EESQuery(object):
+	def __init__(self, children=None, operation=''):
+		self._op=operation
+		self._ch=children if hasattr(children, '__iter__') else [children] if children else []
+
+	@property
+	def query_type(self): return "vertices"
+
+	def append(self, child):
+		if hasattr(child, '__iter__'):
+			self._ch.extend(child)
+		else:
+			self._ch.append(child)
+
+	def clear(self):
+		self._ch = []
+
+	def __str__(self):
+		def escape_fieldname(string):
+			string = [('\\' + c if c in "\\/+-~=\"<>!(){}[]^:&|*?"
+					   else c)
+					  for c in string]
+			if string[0] in ['\\+','\\-']:
+				string[0] = string[0][1:]
+			return "".join(string)
+		def escape_term(string):
+			if string[0] == "/" and string[-1] == "/":
+				return string[0] + escape_term(string[1:-1]) + string[-1]
+			elif string[0] == "[" and string[-1] == "]":
+				return string[0] + escape_term(string[1:-1]) + string[-1]
+			elif string[0] == "{" and string[-1] == "}":
+				return string[0] + escape_term(string[1:-1]) + string[-1]
+			elif string[0] == "(" and string[-1] == ")":
+				return string[0] + escape_term(string[1:-1]) + string[-1]
+			elif string[0] in [">","<"]:
+				return string[0] + escape_term(string[1:])
+			else:
+				return "".join([('\\' + c if c in "\\/+-~=<>!(){}[]^:&|"
+						   else c)
+						  for c in string])
+
+		def escape_es(string):
+			if string in ['AND', 'OR', 'NOT']:
+				return string
+			field, cond = tuple(string.split(':',1))
+			return "{field}:{cond}".format(
+				field=escape_fieldname(field),
+				cond=escape_term(cond)
+			)
+
+		if self._op in ["AND", "OR", '']:
+			term = " {op} ".format(op=self._op).join(
+				[str(child) if isinstance(child, EESQuery) else escape_es(child) for child in self._ch]
+			)
+			return "( " + term + " )" if len(self._ch)>=2 else term
+		elif self._op == "NOT" and len(self._ch) == 1:
+			return "{op} {term}".format(op=self._op, term=str(self._ch[0]))
+		else:
+			raise NotImplementedError
+
 class ESQuery(object):
 	def __init__(self, conditions={}):
 		self.conditions = {}
@@ -278,7 +338,7 @@ def QueryResult(graph, query, count=False, limit=-1, offset=0, fields=None, conc
 			yield len(query.node_ids)
 			raise StopIteration()
 		result_ids = query.node_ids
-	elif type(query) is ESQuery:
+	elif type(query) is ESQuery or type(query) is EESQuery:
 		if count:
 			yield int(graph.request(
 			'POST', '/query/' + query.query_type,
