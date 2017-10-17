@@ -36,7 +36,7 @@ import sys
 from gevent import monkey; monkey.patch_all()
 import codecs
 import gevent, gevent.pool
-from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, JSONValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
+from graphit import GraphitSession, WSO2Error, WSO2AuthClientCredentials, ESQuery, EESQuery, IDQuery, VerbQuery, GraphitError, chunks, XMLValidator, JSONValidator, GraphitNodeError, MARSNode, GraphitNode, MARSNodeError
 from docopt import docopt
 from ConfigParser import ConfigParser
 from requests.structures import CaseInsensitiveDict
@@ -76,8 +76,10 @@ if __name__ == '__main__':
 		session.verify=config.get('graphit', 'verifycert')
 
 	if args['mars'] and args['list']:
-		q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"]})
-		if args['PATTERN']: q.add({"+ogit/_id":args['PATTERN']})
+		q = EESQuery(['+ogit/_type:"ogit/Automation/MARSNode"', '+ogit/_type:*'])
+		if args['PATTERN']:
+			q.append(["+ogit/_id:{pat}".format(pat=pattern) for pattern in args['PATTERN']])
+		#print q
 		try:
 			if args['--count']:
 				for r in session.query(q, fields=['ogit/_id'], count=args['--count']):
@@ -203,12 +205,12 @@ if __name__ == '__main__':
 			sys.exit(1)
 		try:
 			if args['--count-unsynced']:
-				q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"], "+ogit/Automation/isDeployed":["false"]})
+				q = EESQuery(["+ogit/_type:\"ogit/Automation/MARSNode\"", "+ogit/Automation/isDeployed:\"false\""])
 				for r in session.query(q, count=True):
 					print r
 				sys.exit(0)
 			elif args['--list-unsynced']:
-				q = ESQuery({"+ogit/_type":["ogit/Automation/MARSNode"], "+ogit/Automation/isDeployed":["false"]})
+				q = EESQuery(["+ogit/_type:\"ogit/Automation/MARSNode\"", "+ogit/Automation/isDeployed:\"false\""])
 				for r in session.query(q, fields=['ogit/_id']):
 					print >>sys.stdout, r['ogit/_id']
 				sys.exit(0)
@@ -229,7 +231,7 @@ if __name__ == '__main__':
 		print >>sys.stdout, session.auth.token
 
 	if args['ci'] and args['count_orphans']:
-		q = ESQuery({"+ogit/_type":["ogit/ConfigurationItem"]})
+		q = EESQuery("+ogit/_type:\"ogit/ConfigurationItem\"")
 		try:
 			orphsum = 0
 			def count_corresponds(node):
@@ -246,7 +248,7 @@ if __name__ == '__main__':
 			sys.exit(5)
 
 	if args['ci'] and args['cleanup_orphans']:
-		q = ESQuery({"+ogit/_type":["ogit/ConfigurationItem"]})
+		q = EESQuery("+ogit/_type:\"ogit/ConfigurationItem\"")
 		try:
 			def delete_if_orphan(node):
 				q2 = VerbQuery(node['ogit/_id'], "ogit/corresponds")
@@ -303,9 +305,7 @@ if __name__ == '__main__':
 				print >>sys.stdout, "{id}: Failure, node doesn't have an attribute '{attr}'".format(
 					id=mars_id, attr=args['--attr'])
 				return
-			q = ESQuery()
-			q.add({'+ogit/id':[new_id]})
-			q.add({'+ogit/_type':['ogit/ConfigurationItem']})
+			q = EESQuery(["+ogit/id:\"{new_id}\"".format(new_id=new_id), "+ogit/_type:\"ogit/ConfigurationItem\""])
 			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
 				print "{id}: ConfigurationItem with ogit/id '{c}' already exists".format(
 					id=mars_id, c=new_id)
@@ -353,9 +353,7 @@ if __name__ == '__main__':
 					print >>sys.stdout, "{id}: Failure: {err}".format(id=mars_id, err=e)
 				return
 			new_id = args['--value']
-			q = ESQuery()
-			q.add({'+ogit/id':[new_id]})
-			q.add({'+ogit/_type':['ogit/ConfigurationItem']})
+			q = EESQuery(["+ogit/id:\"{new_id}\"".format(new_id=new_id), "+ogit/_type:\"ogit/ConfigurationItem\""])
 			if len(list(session.query(q, fields=['ogit/_id']))) > 0:
 				print "{id}: ConfigurationItem with ogit/id '{c}' already exists".format(
 					id=mars_id, c=new_id)
@@ -442,10 +440,10 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	if args['vertex'] and args['query']:
-		q = ESQuery()
+		q = EESQuery()
 		for cond in args['QUERY']:
-			arr=cond.split(':', 1)
-			q.add({arr[0]:arr[1]})
+			q.append(cond)
+		print q
 		try:
 			if args['--count']:
 				for r in session.query(q, fields=['ogit/_id'], count=args['--count']):
