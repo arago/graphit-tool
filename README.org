@@ -3,7 +3,7 @@
 #+DATE: v0.1, 2017-01-10
 #+ATTR_ASCIIDOC: :icons font
 
-Small command line tool to work with GraphIT. Includes `graphit.py`, a library that can be used by other project. The API documentation can be found in the Wiki: [[https://github.com/arago/graphit-tool/wiki#api-documentation][API Documentation]]
+Small command line tool to work with GraphIT. Includes ~graphit.py~, a library that can be used by other project. The API documentation can be found in the Wiki: [[https://github.com/arago/graphit-tool/wiki#api-documentation][API Documentation]]
 
 * Installation
   Download and install the ~.rpm~ packages from the [[../../releases][releases page]] of this repository. There are some dependencies that require
