@@ -15,8 +15,8 @@ distutils.core.setup(name=name,
     description="Tool to manipulate GraphIT",
     long_description="Tool to manipulate GraphIT",
 
-    scripts=['graphit-tool.py'],
+    #scripts=['graphit-tool.py'],
     py_modules=['graphit'],
-    data_files=[('/etc', ['conf/graphit-tool.conf']), ('/usr/share/graphit-tool', ['data/MODEL_default.xsd', 'data/json_marsnode.json'])],
+    #data_files=[('/etc', ['conf/graphit-tool.conf']), ('/usr/share/graphit-tool', ['data/MODEL_default.xsd', 'data/json_marsnode.json'])],
     install_requires=[ 'requests', 'ijson' ]
 )
