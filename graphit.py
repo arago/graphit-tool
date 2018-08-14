@@ -119,10 +119,10 @@ class GraphitSession(requests.Session):
 		return self.request('GET', resource).json()
 
 	def update(self, resource, data, params=None):
-		return self.request('POST', resource, data=data, params=params).json()
+		return self.request('POST', resource, data={k:v for k,v in data.items() if k != "ogit/_id"}, params=params).json()
 
 	def replace(self, resource, data, params=None):
-		return self.request('PUT', resource, data=data, params=params).json()
+		return self.request('PUT', resource, data={k:v for k,v in data.items() if k != "ogit/_id"}, params=params).json()
 
 	def delete(self, resource):
 		return self.request('DELETE', resource).json()
@@ -594,6 +594,7 @@ class GraphitNode(GraphitObject):
 				raise
 
 	def update(self):
+		
 		self.session.update('/' + quote_plus(self.data["ogit/_id"]), self.data)
 
 	def pull(self):
