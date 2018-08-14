@@ -566,7 +566,7 @@ class GraphitNode(GraphitObject):
 			return self.data[attr]
 
 	def set_attr(self, attr, value):
-		self.data[attr] = val
+		self.data[attr] = value
 		self.update()
 		if value is None:
 			del self.data[attr]
