@@ -1,4 +1,4 @@
-import gevent  # NOQA
+#import gevent  # NOQA
 import requests
 import requests.auth
 import time
