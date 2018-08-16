@@ -115,8 +115,8 @@ class GraphitSession(requests.Session):
 				raise e
 		return r
 
-	def get(self, resource):
-		return self.request('GET', resource).json()
+	def get(self, resource, params=None):
+		return self.request('GET', resource, params=params).json()
 
 	def update(self, resource, data, params=None):
 		return self.request('POST', resource, data={k:v for k,v in data.items() if k != "ogit/_id"}, params=params).json()
