@@ -353,7 +353,7 @@ class EESQuery(object):
 	def __init__(self, *clauses, operation='AND'):
 		self._op = operation
 		self._ch = list(clauses)
-		print(self._ch)
+		#print(self._ch)
 		self.query_type = "vertices"
 
 	def append(self, *clauses):
