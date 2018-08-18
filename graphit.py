@@ -88,6 +88,10 @@ class GraphitSession(requests.Session):
 		try:
 			headers = self._headers
 			headers["Accept"] = "application/json"
+			if params:
+				params['listMeta'] = "true"
+			else:
+				params = {"listMeta":"true"}
 			data = data if raw else json.dumps(data)
 			r = super(GraphitSession, self).request(
 				method, self._baseurl + url, headers=self._headers,
