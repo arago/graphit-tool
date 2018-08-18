@@ -98,7 +98,7 @@ class GraphitSession(requests.Session):
 				params=params, data=data, stream=True)
 			if DEBUG():
 				print("======================= REQUEST =======================", file=sys.stderr)
-				print("{op} {url}".format(op=method, url=url), file=sys.stderr)
+				print("{op} {url}".format(op=method, url=r.url), file=sys.stderr)
 				print("Headers:", file=sys.stderr)
 				for key, value in r.request.headers.items():
 					print("  {k}: {v}".format(k=key, v=value), file=sys.stderr)
