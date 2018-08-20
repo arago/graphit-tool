@@ -591,7 +591,7 @@ class GraphitNode(GraphitObject):
 		try:
 			self.data = self.session.create(self.data['ogit/_type'], self.data)
 		except GraphitError as e:
-			if e.status == 400 and self.owner_error_regex.match(e.message):
+			if e.status_code == 400 and self.owner_error_regex.match(e.message):
 				self.create_owner(owner)
 				self.create()
 			else:
