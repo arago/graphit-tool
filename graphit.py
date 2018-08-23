@@ -244,7 +244,7 @@ class GraphitAppAuth(GraphitAuthBase):
 					"Content-type": "application/json",
 					"Charset": "UTF-8"
 				},
-				data = {
+				json = {
 					"client_id": self._client_id,
 					"client_secret": self._client_secret,
 					"username": self._username,
