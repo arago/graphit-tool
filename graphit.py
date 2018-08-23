@@ -214,12 +214,6 @@ class GraphitAuthBase(requests.auth.AuthBase):
 		self._verify = verify
 		self._token = self._get_token()
 
-	def __str__(self):
-		str = "Token {token} expires in {exp} seconds."
-		return str.format(
-			token=self._token.access_token,
-			exp=int(self._token.expires_in))
-
 	@property
 	def token(self):
 		return self._token.access_token
