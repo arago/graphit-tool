@@ -193,6 +193,80 @@ class GraphitSession(requests.Session):
 	def __str__(self):
 		return 'GraphIT at {url}'.format(url=self._baseurl)
 
+class GraphitToken(object):
+	def __init__(self, t):
+		self.access_token = t['_TOKEN']
+		self.application = t['_APPLICATION']
+		self.identity = t['_IDENTITY']
+		self.identity_id = t['_IDENTITY_ID']
+		self.expires_at = t['expires-at']
+
+	def __str__(self):
+		return self.access_token
+
+	@property
+	def expires_in(self):
+		return int((self.expires_at - (time.time() * 1000)) // 1000)
+
+class GraphitAuthBase(requests.auth.AuthBase):
+	def __init__(self, baseurl, verify=True):
+		self._baseurl = baseurl
+		self._verify = verify
+		self._token = self._get_token()
+
+	def __str__(self):
+		str = "Token {token} expires in {exp} seconds."
+		return str.format(
+			token=self._token.access_token,
+			exp=int(self._token.expires_in))
+
+	@property
+	def token(self):
+		return self._token.access_token
+
+	def _renew_token(self):
+		self._token = self._get_token()
+
+	def __call__(self, r):
+		if self._token.expires_in < 60:
+			self._renew_token()
+		r.headers['_TOKEN'] = self._token.access_token
+		return r
+
+class GraphitAppAuth(GraphitAuthBase):
+	def __init__(self, baseurl, verify=True, client_id, client_secret, username, password):
+		self._client_id ) client_id
+		self._client_secret = client_secret
+		self._username = username
+		self._password = password
+		super().__init__(baseurl=baseurl, verify=verify)
+
+	def _get_token(self):
+		try:
+			r = requests.post(
+				"{baseurl}/api/6/auth/app".format(baseurl=self._baseurl),
+				headers = {
+					"User-Agent": "python-graphit/2.0",
+					"Content-type": "application/json",
+					"Charset": "UTF-8"
+				},
+				data = {
+					"client_id": self._client_id,
+					"client_secret": self._client_secret,
+					"username": self._username,
+					"password": self._password
+				},
+				verify = self._verify
+			)
+			r.raise_for_status()
+		except requests.exceptions.HTTPError as e:
+			try:
+				error_message = r.json()['error']['message']
+				raise GraphitError(self, r.status_code, error_message)
+			except (ValueError, KeyError):
+				raise e
+		return GraphitToken(r.json())
+
 
 class WSO2AuthBase(requests.auth.AuthBase):
 	def __init__(self, baseurl, verify=True):
