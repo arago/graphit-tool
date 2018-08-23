@@ -224,7 +224,7 @@ class GraphitAuthBase(requests.auth.AuthBase):
 	def __call__(self, r):
 		if self._token.expires_in < 60:
 			self._renew_token()
-		r.headers['_TOKEN'] = self._token.access_token
+		r.headers['_TOKEN'] = self.token
 		return r
 
 class GraphitAppAuth(GraphitAuthBase):
