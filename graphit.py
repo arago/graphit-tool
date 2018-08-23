@@ -234,7 +234,7 @@ class GraphitAuthBase(requests.auth.AuthBase):
 		return r
 
 class GraphitAppAuth(GraphitAuthBase):
-	def __init__(self, baseurl, verify=True, client_id, client_secret, username, password):
+	def __init__(self, baseurl, client_id, client_secret, username, password, verify=True):
 		self._client_id = client_id
 		self._client_secret = client_secret
 		self._username = username
