@@ -279,9 +279,7 @@ class WSO2AuthBase(requests.auth.AuthBase):
 			if r.status_code in [400, 401]:
 				raise WSO2Error("Could not get an access token from WSO2, check client credentials!")
 			else:
-				raise WSO2Error(e.message)
-		except requests.exceptions.ConnectionError as e:
-			raise WSO2Error("Could not connect to WSO2: " + str(e))
+				raise
 		self._token = Token(r.json())
 
 	def __str__(self):
