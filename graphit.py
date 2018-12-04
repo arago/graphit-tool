@@ -123,10 +123,10 @@ class GraphitSession(requests.Session):
 		return self.request('GET', resource, params=params).json()
 
 	def update(self, resource, data, params=None):
-		return self.request('POST', resource, data={k:v for k,v in data.items() if k != "ogit/_id"}, params=params).json()
+		return self.request('POST', resource, data={k:v for k,v in data.items() if k not in ["ogit/_id", "ogit/_type", "ogit/_xid"]}, params=params).json()
 
 	def replace(self, resource, data, params=None):
-		return self.request('PUT', resource, data={k:v for k,v in data.items() if k != "ogit/_id"}, params=params).json()
+		return self.request('PUT', resource, data={k:v for k,v in data.items() if k not in ["ogit/_id", "ogit/_type", "ogit/_xid"]}, params=params).json()
 
 	def delete(self, resource):
 		return self.request('DELETE', resource).json()
@@ -276,7 +276,7 @@ class WSO2AuthBase(requests.auth.AuthBase):
 				verify=self._verify)
 			r.raise_for_status()
 		except requests.exceptions.HTTPError as e:
-			if r.status_code == 401:
+			if r.status_code in [400, 401]:
 				raise WSO2Error("Could not get an access token from WSO2, check client credentials!")
 			else:
 				raise WSO2Error(e.message)
@@ -639,7 +639,8 @@ class GraphitNode(GraphitObject):
 
 	def set_attr(self, attr, value):
 		self.data[attr] = value
-		self.update()
+		#self.update()
+		self.session.update('/' + quote_plus(self.data["ogit/_id"]), {attr: value})
 		if value is None:
 			del self.data[attr]
 
@@ -666,7 +667,6 @@ class GraphitNode(GraphitObject):
 				raise
 
 	def update(self):
-		
 		self.session.update('/' + quote_plus(self.data["ogit/_id"]), self.data)
 
 	def pull(self):
