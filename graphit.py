@@ -682,7 +682,7 @@ class GraphitNode(GraphitObject):
 					}
 				)
 			except GraphitError as e:
-				if e.status == 400 and self.owner_error_regex.match(e.message):
+				if e.status_code == 400 and self.owner_error_regex.match(e.message):
 					self.create_owner(owner)
 					self.push()
 				else:
@@ -694,9 +694,9 @@ class GraphitNode(GraphitObject):
 		try:
 			self.session.delete('/' + self.data["ogit/_id"])
 		except GraphitError as e:
-			if e.status == 404:
+			if e.status_code == 404:
 				raise GraphitNodeError("Cannot delete node '{nd}': Not found!".format(nd=self.data["ogit/_id"]))
-			elif e.status == 409:
+			elif e.status_code == 409:
 				raise GraphitNodeError("Cannot delete node '{nd}': Already deleted!".format(nd=self.data["ogit/_id"]))
 			else:
 				raise
