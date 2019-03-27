@@ -298,7 +298,6 @@ class WSO2AuthBase(requests.auth.AuthBase):
 		r.headers['_TOKEN'] = self._token.access_token
 		return r
 
-
 class WSO2AuthClientCredentials(WSO2AuthBase):
 	def __init__(self, baseurl, client, verify=True):
 		self._client_id, self._client_secret = client
@@ -327,15 +326,15 @@ class WSO2AuthClientCredentials(WSO2AuthBase):
 
 class WSO2AuthUserCredentials(WSO2AuthBase):
 	def __init__(self, baseurl, client, user_creds, verify=True):
-		self._client_d , self._client_secret = client
+		self._client_id, self._client_secret = client
 		self._username, self._password = user_creds
-		super(WSO2AuthClientCredentials, self).__init__(
+		super().__init__(
 			baseurl,
 			verify=verify
 		)
 
 	def get_token(self):
-		super(WSO2AuthClientCredentials, self).get_token(
+		super().get_token(
 			headers={
 				"User-Agent": "PyGraphIT/1.0",
 				"Content-Type": "application/x-www-form-urlencoded",
