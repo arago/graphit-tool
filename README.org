@@ -5,7 +5,7 @@
 
 Small command line tool to work with GraphIT. Includes ~graphit.py~, a library that can be used by other project. The API documentation can be found in the Wiki: [[https://github.com/arago/graphit-tool/wiki#api-documentation][API Documentation]]
 
-IMPORTANT: The instructions below are outdated and only work with HIRO version 5. For HIRO 6, graphit-tool can only be used as a Python library, please have a look at the Wiki.
+IMPORTANT: The instructions below are outdated and only work with HIRO version 5. For HIRO 6, graphit-tool can only be used as a Python library for now, please have a look at the Wiki.
 
 * Roadmap
   See [[Roadmap.org][Roadmap]]
