@@ -1,0 +1,20 @@
+* Ideas/Roadmap
+  - All Graph-native objects have a .data, .json, .yaml and .xml
+    method that exposes the data in the respective format
+  - Expose Timeseries as pandas dataframe for easy plotting
+  - Queries should return Objects of the respective Classes instead of
+    raw lists of dicts.
+  - Timeseries and Attachments should check ogit/_type
+  - Logging instead of writing to sys.stderr
+  - Re–implement queries
+  - Rework Exception hierachy
+  - Turn the module into a package under the "arago" namespace
+  - The return of the actual "graphit-tool" command–line tool
+  - Integrate the "helper" module
+  - Integrate the "connect" module
+  - New classes for the specialized APIs
+  - Integrate with ipython for a "graphit-shell"
+  - Long-term: Jupyter-only: Graph visualizations???
+  - Long-term: Expose subgraphs as networkx graphs, with two-way sync
+  - Long-term: Expose subgraphs in a standard, serialized format
+  - Long-term: Provide import methods for all of the above
