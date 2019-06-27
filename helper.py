@@ -1,4 +1,4 @@
-import graphit, connect, requests
+import arago.graphit as graphit, arago.connect as connect, requests
 from configparser import ConfigParser
 import errno
 import os
