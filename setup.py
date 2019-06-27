@@ -16,7 +16,7 @@ distutils.core.setup(name=name,
     long_description="Tool to manipulate GraphIT",
 
     #scripts=['graphit-tool.py'],
-    py_packages=['arago.graphit', 'arago.connect'],
+    packages=['arago.graphit', 'arago.connect'],
     #data_files=[('/etc', ['conf/graphit-tool.conf']), ('/usr/share/graphit-tool', ['data/MODEL_default.xsd', 'data/json_marsnode.json'])],
     install_requires=[ 'requests', 'ijson' ]
 )
