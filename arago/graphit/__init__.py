@@ -581,7 +581,7 @@ class GraphitNode(GraphitObject):
 	def from_xid(cls, session, xid):
 		try:
 			data = session.get('/xid/' + quote_plus(xid))['items'][0]
-		except KeyError:
+		except (KeyError, IndexError):
 			raise GraphitError(self, 404, "Not found")
 		return cls(session, data)
 
