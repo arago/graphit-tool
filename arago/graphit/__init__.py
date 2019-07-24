@@ -582,7 +582,7 @@ class GraphitNode(GraphitObject):
 		try:
 			data = session.get('/xid/' + quote_plus(xid))['items'][0]
 		except (KeyError, IndexError):
-			raise GraphitError(self, 404, "Not found")
+			raise GraphitError(session, 404, "Not found")
 		return cls(session, data)
 
 	def create_owner(self, owner=None):
