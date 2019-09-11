@@ -105,9 +105,7 @@ class RestSession(requests.Session):
 		self.hooks['response'].extend([debug_request, debug_response])
 
 	def __repr__(self):
-		cls = type(self)
-		myurl = self._baseurl
-		return f"<{cls.__name__} '{myurl}'>"
+		return "<{cls} '{baseurl}'>".format(cls=type(self).__name__, baseurl=self._baseurl)
 
 	def request(self, method, url, params=None, data=None, raw=False, *args, **kwargs):
 		try:
@@ -249,12 +247,14 @@ class GraphitAuthBase(requests.auth.AuthBase):
 				#print(f"Throttling a little bit ({timeout})")
 				time.sleep(timeout)
 			self._renew_token()
-			response.request.headers['_TOKEN'] = self.token
+			#response.request.headers['_TOKEN'] = self.token
+			response.request.headers['Authorization'] = "Bearer {token}".format(token=self.token)
 			return self.handle_response(response.connection.send(response.request, *args, **kwargs), retry=retry+1)
 		return response
 
 	def __call__(self, r):
-		r.headers['_TOKEN'] = self.token
+		#r.headers['_TOKEN'] = self.token
+		r.headers['Authorization'] = "Bearer {token}".format(token=self.token)
 		r.register_hook('response', self.handle_response)
 		return r
 
@@ -326,7 +326,8 @@ class WSO2AuthBase(requests.auth.AuthBase):
 	def __call__(self, r):
 		if self._token.expires_in < 60:
 			self.renew_token()
-		r.headers['_TOKEN'] = self._token.access_token
+		#r.headers['_TOKEN'] = self._token.access_token
+		r.headers['Authorization'] = "Bearer {token}".format(token=self._token.access_token)
 		return r
 
 class WSO2AuthClientCredentials(WSO2AuthBase):
