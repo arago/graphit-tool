@@ -20,7 +20,7 @@ def get_key_type(key, attributes, other_entites):
 	elif key in other_entites:
 		return SUBT
 	else:
-		raise NotImplementedError
+		raise NotImplementedError(f"Key {key} not defined!")
 
 def find_key(mydict, key):
     return list(mydict.keys())[list(mydict.values()).index(key)]
