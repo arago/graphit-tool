@@ -269,7 +269,7 @@ class GraphitAppAuth(GraphitAuthBase):
 	def _get_token(self):
 		try:
 			r = requests.post(
-				"{baseurl}/api/6/auth/app".format(baseurl=self._baseurl),
+				"{baseurl}/app".format(baseurl=self._baseurl),
 				headers = {
 					"User-Agent": "python-graphit/2.0",
 					"Content-type": "application/json",
